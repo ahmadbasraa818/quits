@@ -44,23 +44,22 @@ export function toInputString(minor: number, currency: CurrencyCode): string {
   return `${sign}${digits.slice(0, -decimals)}.${digits.slice(-decimals)}`;
 }
 
-const formatters = new Map<string, Intl.NumberFormat>();
+const formatters = new Map<number, Intl.NumberFormat>();
 
-/** "£1,234.50", "¥96,000", "$5.00". With `signed`, gains get a plus sign. */
+/**
+ * "£1,234.50", "¥96,000", "$5.00". With `signed`, gains get a plus sign.
+ *
+ * The number comes from Intl, for its grouping, but the symbol is the app's
+ * own: iOS ignores Intl's narrow symbols and writes "JP¥" and "US$", so
+ * leaving it to the platform would print different money on each one.
+ */
 export function formatMoney(minor: number, currency: CurrencyCode, { signed = false } = {}): string {
-  const key = `${currency}|${signed}`;
-  let formatter = formatters.get(key);
+  const { decimals, symbol } = CURRENCIES[currency];
+  let formatter = formatters.get(decimals);
   if (!formatter) {
-    const { decimals } = CURRENCIES[currency];
-    formatter = new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-      signDisplay: signed ? 'exceptZero' : 'auto',
-    });
-    formatters.set(key, formatter);
+    formatter = new Intl.NumberFormat('en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    formatters.set(decimals, formatter);
   }
-  return formatter.format(minor / 10 ** CURRENCIES[currency].decimals);
+  const sign = minor < 0 ? '-' : signed && minor > 0 ? '+' : '';
+  return `${sign}${symbol}${formatter.format(Math.abs(minor) / 10 ** decimals)}`;
 }

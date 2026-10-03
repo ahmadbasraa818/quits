@@ -45,6 +45,13 @@ describe('formatMoney', () => {
     expect(formatMoney(96000, 'JPY')).toBe('¥96,000');
   });
 
+  it('writes the same symbols on every platform, never "JP¥" or "US$"', () => {
+    expect(formatMoney(102940, 'JPY')).toBe('¥102,940');
+    expect(formatMoney(-102940, 'JPY')).toBe('-¥102,940');
+    expect(formatMoney(123456789, 'USD')).toBe('$1,234,567.89');
+    expect(formatMoney(5, 'EUR')).toBe('€0.05');
+  });
+
   it('can sign gains and losses', () => {
     expect(formatMoney(2500, 'GBP', { signed: true })).toBe('+£25.00');
     expect(formatMoney(-2500, 'GBP', { signed: true })).toBe('-£25.00');
