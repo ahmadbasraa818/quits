@@ -81,7 +81,7 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **58 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **59 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
 - **22 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create a group and reload; follow a deep link; and run axe accessibility scans of five screens in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
