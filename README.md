@@ -217,19 +217,16 @@ Quits has no backend: groups live on the device. To share one, [`shareLink`](src
 ## How it’s built
 
 ```mermaid
-flowchart TD
-  screens["<b>Screens</b> · src/app<br>Expo Router, typed routes"] --> components["<b>Components</b> · src/components<br>sheets, charts, the settle-up graph"]
-  screens --> store["<b>Store</b> · src/store<br>Zustand, persisted and migrated"]
-  screens --> lib
-  components --> store
-  components --> lib
-  store --> lib["<b>Logic</b> · src/lib<br>plain TypeScript, no React"]
-  store <--> storage[("AsyncStorage<br>localStorage on the web")]
-  lib -. "a currency pair and a date" .-> ecb[("ECB rates<br>through Frankfurter")]
-  lib -. "the whole group, after the #" .-> link[("A share link")]
+flowchart LR
+  app["<b>Screens</b><br>src/app"] --> components["<b>Components</b><br>src/components"]
+  components --> store["<b>Store</b><br>src/store"]
+  store --> lib["<b>Logic</b><br>src/lib"]
+  store <--> device[("Saved on the device")]
+  lib -. "a currency pair and a date" .-> ecb[("ECB rates")]
+  lib -. "the group, after the #" .-> link[("A share link")]
 ```
 
-The logic in `src/lib` has no React in it, so the arithmetic that matters (money, splits, balances, settling up, conversion, parsing) is tested directly, and the screens stay thin. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) goes through the layers and the decisions behind them.
+Each layer can use any layer below it, never one above. The logic in `src/lib` has no React in it, so the arithmetic that matters (money, splits, balances, settling up, conversion, parsing) is tested directly, and the screens stay thin. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) goes through the layers and the decisions behind them.
 
 | | |
 |---|---|
