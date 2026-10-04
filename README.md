@@ -29,6 +29,7 @@
 ## What it does
 
 - **Groups** for a trip, a flat or a night out, in any of 33 currencies. Rename them, add people, mark who has left, or delete a group and undo it.
+- **Pay in one currency, settle in another:** each expense can be in its own currency, converted at the European Central Bank’s rate for its date or at a rate you type, fixed when you save it.
 - **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
 - **Split any way:** equally, by shares, or by exact amounts. Every split adds up to the penny.
 - **See where everyone stands:** each balance is a bar either side of zero.
@@ -57,6 +58,16 @@ It is checked, not just argued. Property tests (fast-check) generate hundreds of
 - When a bill won’t divide evenly, the leftover units go to the largest fractional parts, using the largest remainder method. £10 between three people is £3.34, £3.33 and £3.33, never £9.99 or £10.01. Property tests confirm that every split adds up exactly and that no one is ever more than a unit from their fair share.
 - Amounts are parsed from what people type without ever going through floating point, and each currency keeps its own number of decimals: yen has none. The decimal comma works too, so “12,50” is twelve fifty and “1,250” is one thousand two hundred and fifty.
 
+## Exact currency conversion
+
+The demo trip keeps its books in yen, but the JR Passes were bought at home: £1,310.00 at £1 = ¥207.31.
+
+- Rates are stored as decimal strings, exactly as the ECB publishes them or as you typed them, never as floats. Each is kept the way round that reads above one, so it's "£1 = ¥207.31", not "¥1 = £0.0048237".
+- [`convert`](src/lib/fx.ts) multiplies whole numbers in BigInt and rounds once, half up. £1,310.00 × 207.31 is exactly ¥271,576.10, so ¥271,576.
+- The split is worked out in the currency that was paid. The converted total is then divided in the same proportions with the largest remainder method, so the shares add up to the yen exactly. That proportional division can multiply two large amounts past 2^53, so `allocate` switches to BigInt there. A property test found that case.
+- Rates come from the ECB through [Frankfurter](https://frankfurter.dev): free, keyless, and open to any website. On a weekend the reply carries Friday's rate and says so. Without a connection, or for the three currencies the ECB doesn't cover, you type the rate, and Quits reads it back ("£1 = ₫33,000") so a thousands comma can't quietly become a decimal point. Looked-up rates are kept, since a past day's rate never changes.
+- Version 2 of the saved data added the JR Passes to the demo. [A migration](src/store/migrations.ts) gives returning visitors the new demo only if they never changed theirs.
+
 ## How it’s built
 
 | | |
@@ -82,8 +93,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **100 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **32 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create, edit and delete groups; date an expense; follow a deep link; and run axe accessibility scans of nine screens and sheets in light and dark mode.
+- **159 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **40 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of ten screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it
