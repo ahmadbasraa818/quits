@@ -1,30 +1,38 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, type ErrorBoundaryProps, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { CrashScreen } from '@/components/crash-screen';
 import { useSplitView } from '@/components/group-list';
 import { Sidebar } from '@/components/sidebar';
 import { ToastHost } from '@/components/toast';
 import { keepForOffline, listenForInstall } from '@/lib/install';
-import { useGroups } from '@/store/groups';
+import { useHydrated } from '@/store/groups';
+import { loadSetAside } from '@/store/recovery';
 import { useTheme } from '@/theme';
 import { fontFiles } from '@/theme/fonts';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 listenForInstall();
 keepForOffline();
+loadSetAside();
 
 // A modal opened from a link still has the groups list behind it.
 export const unstable_settings = { anchor: 'index' };
 
+/** If any screen throws, a way out instead of a blank page; the groups are untouched. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <CrashScreen error={error} retry={retry} />;
+}
+
 export default function RootLayout() {
   const theme = useTheme();
   const [fontsLoaded, fontError] = useFonts(fontFiles);
-  const hydrated = useGroups((state) => state.hydrated);
+  const hydrated = useHydrated();
   const split = useSplitView();
   const ready = (fontsLoaded || fontError !== null) && hydrated;
 
@@ -50,6 +58,7 @@ export default function RootLayout() {
               <Stack.Screen name="group/[id]/settings" options={{ presentation: 'modal' }} />
               <Stack.Screen name="new-group" options={{ presentation: 'modal' }} />
               <Stack.Screen name="about" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="privacy" options={{ presentation: 'modal' }} />
             </Stack>
           </View>
         </View>

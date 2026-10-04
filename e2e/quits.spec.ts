@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, test } from '@playwright/test';
 
+import app from '../app.json';
+
 const openGroup = async (page: Page, name: string) => {
   await page.goto('./');
   await page.getByRole('button', { name: new RegExp(`^${name}\\.`) }).click();
@@ -508,6 +510,91 @@ test('saves a backup, and restores it', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toBeVisible();
 });
 
+test.describe('looking after saved data', () => {
+  // Seeds this browser's storage once, before the app first loads, and not again on a reload.
+  const seed = (page: Page, value: string) =>
+    page.addInitScript((saved) => {
+      if (!sessionStorage.getItem('seeded')) {
+        localStorage.setItem('quits', saved);
+        sessionStorage.setItem('seeded', 'yes');
+      }
+    }, value);
+
+  test('sets aside saved data it can’t read, and keeps it until it’s saved or deleted', async ({ page }) => {
+    await seed(page, '{not json');
+    // Keeps the text of every file the app offers to save, to read back here.
+    await page.addInitScript(() => {
+      const saved: string[] = ((window as unknown as { saved: string[] }).saved = []);
+      const original = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = (blob: Blob | MediaSource) => {
+        if (blob instanceof Blob) blob.text().then((text) => saved.push(text));
+        return original(blob);
+      };
+    });
+    await page.goto('./');
+    await expect(page.getByTestId('notice-set-aside')).toBeVisible();
+    // The app opens as if new rather than not at all.
+    await expect(page.getByRole('button', { name: /^Japan trip\./ })).toBeVisible();
+
+    const download = page.waitForEvent('download');
+    await page.getByTestId('save-set-aside').click();
+    expect((await download).suggestedFilename()).toMatch(/^quits-unreadable-\d{4}-\d{2}-\d{2}\.json$/);
+    const copy = JSON.parse(await page.evaluate(() => (window as unknown as { saved: string[] }).saved[0]));
+    expect(copy[0].data).toBe('{not json');
+
+    await page.reload();
+    await expect(page.getByTestId('notice-set-aside')).toBeVisible();
+    await page.getByTestId('delete-set-aside').click();
+    await page.getByTestId('confirm').click();
+    await expect(page.getByTestId('notice-set-aside')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('button', { name: /^Japan trip\./ })).toBeVisible();
+    await expect(page.getByTestId('notice-set-aside')).toHaveCount(0);
+  });
+
+  test('opens every group it can, and sets aside one it can’t', async ({ page }) => {
+    const sound = { id: 'g_ok', name: 'Lunch club', currency: 'GBP', members: [{ id: 'you', name: 'You', tone: 0 }, { id: 'm_sam', name: 'Sam', tone: 1 }], me: 'you', expenses: [], payments: [], createdAt: 1 };
+    await seed(page, JSON.stringify({ state: { groups: [sound, { ...sound, id: 'g_bad', name: 'Broken trip', expenses: 'not a list' }] }, version: 3 }));
+    await page.goto('./');
+    await expect(page.getByRole('button', { name: /^Lunch club\./ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Broken trip\./ })).toHaveCount(0);
+    await expect(page.getByTestId('notice-set-aside')).toContainText('Broken trip');
+  });
+
+  test('says when the browser isn’t saving, and offers a backup', async ({ page }) => {
+    await page.addInitScript(() => {
+      Storage.prototype.setItem = () => {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      };
+    });
+    await page.goto('about');
+    await page.getByTestId('reset-demo').click();
+    await expect(page.getByTestId('notice-not-saving')).toBeVisible();
+    const download = page.waitForEvent('download');
+    await page.getByTestId('save-not-saving').click();
+    expect((await download).suggestedFilename()).toMatch(/^quits-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+});
+
+test('explains how it handles data, from About and at its own address', async ({ page, request }) => {
+  await page.goto('about');
+  await expect(page.getByTestId('app-version')).toHaveText(`Quits ${app.expo.version}`);
+  await page.getByTestId('open-privacy').click();
+  await expect(page.getByRole('heading', { name: 'Your groups stay yours' })).toBeVisible();
+  // The address an app store links to answers 200, not GitHub Pages' 404 fallback.
+  expect((await request.get('privacy')).status()).toBe(200);
+  await page.goto('privacy');
+  await expect(page.getByRole('heading', { name: 'Your groups stay yours' })).toBeVisible();
+});
+
+test('answers a shared link with a preview, not a 404', async ({ request }) => {
+  const response = await request.get('import');
+  expect(response.status()).toBe(200);
+  const page = await response.text();
+  expect(page).toContain('property="og:image" content="https://ahmadbasraa818.github.io/quits/og.png"');
+  expect((await request.get('og.png')).status()).toBe(200);
+});
+
 test.describe('offline', () => {
   test.use({ serviceWorkers: 'allow' });
 
@@ -568,6 +655,8 @@ test.describe('accessibility', () => {
       await page.keyboard.press('Escape');
       await page.goto('import#q1.cut-short');
       await scan('a broken link');
+      await page.goto('privacy');
+      await scan('privacy');
       await page.goto('group/demo_japan');
       await page.getByTestId('quick-add-button').click();
       await page.getByLabel('Describe the expense').fill('Ramen ¥4,800, Aiko paid, split with Ben and me');

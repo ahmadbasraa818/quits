@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateStorage } from 'zustand/middleware';
 
+import { noteNotSaving } from './recovery';
+
 const memory = new Map<string, string>();
 
 /**
@@ -21,7 +23,8 @@ export const safeStorage: StateStorage = {
     try {
       await AsyncStorage.setItem(name, value);
     } catch {
-      // Memory only.
+      // Memory only, and the person is told their changes won't outlast this visit.
+      noteNotSaving();
     }
   },
   async removeItem(name) {

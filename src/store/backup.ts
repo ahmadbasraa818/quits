@@ -29,7 +29,8 @@ export function fromBackup(text: string): Restored {
   const version = file.version as number;
   if (version > STORE_VERSION) return { ok: false, reason: 'That backup is from a newer version of Quits. Reload the app and try again.' };
   const { groups } = migrate({ groups: file.groups }, version);
-  const checked = groups.map(validateGroup);
+  // A backup is the person's own data: sound is enough, whatever its size.
+  const checked = groups.map((group) => validateGroup(group, 'own'));
   if (checked.some((group) => group === null)) return { ok: false, reason: 'Part of that backup is damaged, so nothing was restored.' };
   if (new Set(groups.map((group) => group.id)).size !== groups.length) return { ok: false, reason: 'That backup has the same group twice, so nothing was restored.' };
   return { ok: true, groups: checked as Group[], savedAt: typeof file.savedAt === 'string' ? file.savedAt : '' };

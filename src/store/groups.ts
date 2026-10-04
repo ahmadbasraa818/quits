@@ -1,13 +1,16 @@
+import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist, type PersistStorage } from 'zustand/middleware';
 
 import { createId } from '@/lib/ids';
 import { hasHistory, nextTone, tonesFor } from '@/lib/members';
 import type { CurrencyCode } from '@/lib/money';
 import type { Expense, Group, Member, Payment } from '@/lib/types';
+import { validateGroup } from '@/lib/validate';
 
 import { demoGroups } from './demo';
-import { migrate, STORE_VERSION } from './migrations';
+import { migrate, type Persisted, STORE_VERSION } from './migrations';
+import { setAside } from './recovery';
 import { safeStorage } from './storage';
 
 export type NewExpense = Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>;
@@ -23,7 +26,6 @@ export type GroupEdit = {
 
 type GroupsState = {
   groups: Group[];
-  hydrated: boolean;
   createGroup: (input: { name: string; currency: CurrencyCode; memberNames: string[] }) => string;
   editGroup: (groupId: string, edit: GroupEdit) => void;
   deleteGroup: (groupId: string) => { group: Group; index: number } | undefined;
@@ -81,11 +83,55 @@ export function applyGroupEdit(group: Group, edit: GroupEdit, now = Date.now()):
   return { ...group, name: edit.name.trim(), currency: empty ? edit.currency : group.currency, members, updatedAt: now };
 }
 
+const isShape = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * The store's storage: JSON kept by safeStorage. Saved data that isn't a
+ * readable save of Quits is set aside under its own key rather than written
+ * over by the next save, and the app starts as if new.
+ */
+const groupsStorage: PersistStorage<Persisted> = {
+  getItem: async (name) => {
+    const raw = await safeStorage.getItem(name);
+    if (raw === null) return null;
+    try {
+      const value: unknown = JSON.parse(raw);
+      if (isShape(value) && isShape(value.state) && Array.isArray(value.state.groups) && Number.isInteger(value.version)) return value as { state: Persisted; version: number };
+    } catch {
+      // Not JSON at all: set aside below.
+    }
+    // Once a copy is safely kept, clear the original, so it isn't set aside again on every start.
+    if (await setAside('everything this device had saved', raw)) await safeStorage.removeItem(name);
+    return null;
+  },
+  setItem: (name, value) => safeStorage.setItem(name, JSON.stringify(value)),
+  removeItem: (name) => safeStorage.removeItem(name),
+};
+
+/**
+ * Loads saved groups into the store. Each must be sound, so one damaged group
+ * can't stop the app from opening; a group that isn't is set aside, and the
+ * rest open as normal. An empty list stays empty: the demo only fills a new
+ * device.
+ */
+function mergeSaved(saved: unknown, current: GroupsState): GroupsState {
+  if (!isShape(saved) || !Array.isArray(saved.groups)) return current;
+  const groups: Group[] = [];
+  const kept: Promise<boolean>[] = [];
+  for (const group of saved.groups) {
+    const sound = validateGroup(group, 'own');
+    if (sound) groups.push(sound);
+    else kept.push(setAside(isShape(group) && typeof group.name === 'string' ? `the group “${group.name}”` : 'a group', JSON.stringify(group)));
+  }
+  // Once every damaged group is safely kept, save the sound ones in place of the damaged list.
+  if (kept.length > 0) Promise.all(kept).then((all) => all.every(Boolean) && useGroups.setState((state) => ({ groups: [...state.groups] })));
+  return { ...current, groups };
+}
+
 export const useGroups = create<GroupsState>()(
   persist(
     (set, get) => ({
       groups: demoGroups(),
-      hydrated: false,
 
       createGroup: ({ name, currency, memberNames }) => {
         const id = createId('g');
@@ -234,14 +280,25 @@ export const useGroups = create<GroupsState>()(
       name: 'quits',
       version: STORE_VERSION,
       migrate,
-      storage: createJSONStorage(() => safeStorage),
+      storage: groupsStorage,
       partialize: (state) => ({ groups: state.groups }),
-      onRehydrateStorage: () => () => {
-        useGroups.setState({ hydrated: true });
-      },
+      merge: mergeSaved,
     }
   )
 );
+
+/**
+ * Whether the saved groups have loaded. Asked of the store's persistence
+ * rather than kept in its state, because any change to that state is saved:
+ * marking it loaded would write every group back on every start.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(
+    (onChange) => useGroups.persist.onFinishHydration(onChange),
+    () => useGroups.persist.hasHydrated(),
+    () => false
+  );
+}
 
 export function useGroup(groupId: string | undefined): Group | undefined {
   return useGroups((state) => state.groups.find((group) => group.id === groupId));
