@@ -435,6 +435,79 @@ test('keeps the groups beside the open group on a wide screen', async ({ page },
   await expect(page.getByTestId('open-demo')).toBeVisible();
 });
 
+test.describe('sharing a copy', () => {
+  test('a friend opens the link and gets a copy of their own', async ({ page, context, browser }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined }));
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('share-group').click();
+    await page.getByTestId('my-name').fill('Ahmad');
+    await page.getByTestId('share-link').click();
+    await expect(page.getByText('Link copied, ready to send')).toBeVisible();
+    const message = await page.evaluate(() => navigator.clipboard.readText());
+    const link = message.match(/https:\S+/)![0];
+    expect(link).toMatch(/^https:\/\/ahmadbasraa818\.github\.io\/quits\/import#q1\.[\w-]+$/);
+    const fragment = link.split('#')[1];
+
+    // The friend's own browser, with nothing of the sharer's in it.
+    const friend = await browser.newContext({ baseURL: 'http://localhost:4173/quits/', serviceWorkers: 'block' });
+    const theirs = await friend.newPage();
+    await theirs.goto(`import#${fragment}`);
+    await expect(theirs.getByText('Shared by Ahmad')).toBeVisible();
+    await expect(theirs.getByTestId('add-copy')).toBeDisabled();
+    await theirs.getByTestId('me-aiko').click();
+    await theirs.getByTestId('add-copy').click();
+    // The same trip, seen from Aiko's side.
+    await expect(theirs.getByText('You owe ¥116,395').filter({ visible: true }).first()).toBeVisible();
+    await friend.close();
+
+    // Back with the sharer, the same link is an update, not a second copy.
+    await page.goto(`import#${fragment}`);
+    await expect(page.getByTestId('already-here')).toBeVisible();
+    await page.getByTestId('update-copy').click();
+    await expect(page.getByRole('heading', { name: 'Japan trip' })).toBeVisible();
+  });
+
+  test('says when a link has been cut short', async ({ page }) => {
+    await page.goto('import#q1.cut-short');
+    await expect(page.getByRole('heading', { name: 'This link doesn’t hold a group' })).toBeVisible();
+  });
+
+  test('won’t share under a name someone else has', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('share-group').click();
+    await page.getByTestId('my-name').fill('aiko');
+    await expect(page.getByTestId('share-problem')).toHaveText('Someone in Japan trip is already called aiko.');
+    await expect(page.getByTestId('share-link')).toBeDisabled();
+  });
+});
+
+test('saves a backup, and restores it', async ({ page }) => {
+  await page.goto('about');
+  const download = page.waitForEvent('download');
+  await page.getByTestId('save-backup').click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^quits-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  const path = await file.path();
+
+  // Lose a group, then put everything back.
+  await openGroup(page, 'Flat 4B');
+  await page.getByTestId('group-settings').click();
+  await page.getByTestId('delete-group').click();
+  await page.getByTestId('confirm').click();
+  await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toHaveCount(0);
+
+  await page.goto('about');
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTestId('restore-backup').click();
+  await (await chooser).setFiles(path);
+  await expect(page.getByRole('heading', { name: 'Restore this backup?' })).toBeVisible();
+  await page.getByTestId('confirm').click();
+  await expect(page.getByText('Restored 3 groups')).toBeVisible();
+  await page.goto('./');
+  await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toBeVisible();
+});
+
 test.describe('offline', () => {
   test.use({ serviceWorkers: 'allow' });
 
@@ -487,6 +560,12 @@ test.describe('accessibility', () => {
       await scan('conversion');
       await page.getByTestId('date-field').click();
       await scan('date sheet');
+      await page.goto('group/demo_japan');
+      await page.getByTestId('share-group').click();
+      await scan('share a copy');
+      await page.keyboard.press('Escape');
+      await page.goto('import#q1.cut-short');
+      await scan('a broken link');
       await page.goto('group/demo_japan');
       await page.getByTestId('quick-add-button').click();
       await page.getByLabel('Describe the expense').fill('Ramen ¥4,800, Aiko paid, split with Ben and me');
