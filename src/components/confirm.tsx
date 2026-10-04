@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { space } from '@/theme';
 
 import { Button } from './button';
+import type { IconName } from './icon';
 import { Sheet } from './sheet';
 import { Text } from './text';
 
@@ -15,6 +16,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  icon = 'trash',
   onConfirm,
   onCancel,
 }: {
@@ -22,6 +24,7 @@ export function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel: string;
+  icon?: IconName;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -33,7 +36,7 @@ export function ConfirmDialog({
       testID="confirm-dialog"
       footer={
         <View style={styles.actions}>
-          <Button label={confirmLabel} variant="destructive" icon="trash" onPress={onConfirm} testID="confirm" />
+          <Button label={confirmLabel} variant="destructive" icon={icon} onPress={onConfirm} testID="confirm" />
           <Button label="Cancel" variant="secondary" onPress={onCancel} testID="cancel" />
         </View>
       }

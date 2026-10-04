@@ -39,9 +39,13 @@
           "backgroundColor": "#FF5A1F",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120,
-          "dark": { "backgroundColor": "#FF6A33", "image": "./assets/images/splash-icon.png" }
+          "dark": {
+            "backgroundColor": "#FF6A33",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

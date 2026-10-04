@@ -40,6 +40,7 @@
 - **See where the money went:** spending by category, a timeline by day, week or month, and who paid against who used.
 - **Why do I owe this?** Tap anyone in Balances for every expense and payment behind their balance, line by line, adding up exactly.
 - **Find anything:** search expenses and their notes, ignoring case and accents, or narrow the list to a category.
+- **Share a copy without a server:** send a link, and a friend opens their own copy of the group, choosing which person they are. The group travels inside the link. Back up every group to a file and restore it on any device.
 - **An app on the web too:** install it from the browser and it opens without a connection. On a wide screen your groups stay in a sidebar beside whatever's open.
 - **Undo** for deleted expenses and recorded payments, light and dark themes, and screen-reader labels throughout.
 
@@ -95,6 +96,17 @@ The demo trip keeps its books in yen, but the JR Passes were bought at home: £1
 - Rates come from the ECB through [Frankfurter](https://frankfurter.dev): free, keyless, and open to any website. On a weekend the reply carries Friday's rate and says so. Without a connection, or for the three currencies the ECB doesn't cover, you type the rate, and Quits reads it back ("£1 = ₫33,000") so a thousands comma can't quietly become a decimal point. Looked-up rates are kept, since a past day's rate never changes.
 - Version 2 of the saved data added the JR Passes to the demo. [A migration](src/store/migrations.ts) gives returning visitors the new demo only if they never changed theirs.
 
+## Sharing without a server
+
+Quits has no backend: groups live on the device. To share one, [`shareLink`](src/lib/share-link.ts) packs the whole group into the link itself.
+
+- **Packing:** the group's JSON is deflated with fflate and written in URL-safe base64 after a format marker. The Japan trip, all twelve expenses and five people, comes to a link under 4,000 characters.
+- **Privacy:** the group sits after the `#`, which browsers never send to a server. GitHub Pages only ever sees `/quits/import`.
+- **Opening a link:** the receiver says which person they are and gets a copy of their own.
+- **Recognising copies:** a group gets a random origin id the first time it's shared, and copies carry it. Opening a newer link updates the copy instead of duplicating it. Ids alone wouldn't do, because every visitor's demo trip is `demo_japan`; that was caught by an end-to-end test where a friend with the demo opened the sharer's link.
+- **Safety:** nothing from outside is trusted. Links unpack a piece at a time and stop at a size limit, so a crafted link can't expand without bound. [`validateGroup`](src/lib/validate.ts) then checks every field's type and range, that splits only name people in the group, and that "you" is one of them, before anything is saved.
+- **Backups:** these are JSON files with a version. Restoring one runs the same migrations and checks as everything else.
+
 ## How it’s built
 
 | | |
@@ -121,8 +133,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **242 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **65 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
+- **271 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **73 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; share a copy to a second, empty browser that opens it as another person; save and restore a backup; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of sixteen screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it

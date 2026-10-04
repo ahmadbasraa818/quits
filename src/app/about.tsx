@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform, StyleSheet, View } from 'react-native';
 
@@ -8,6 +9,11 @@ import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout'
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { isAppleMobile, useInstall } from '@/lib/install';
+import { pickBackupFile, saveBackupFile } from '@/components/backup-file';
+import { ConfirmDialog } from '@/components/confirm';
+import { localDate } from '@/lib/dates';
+import type { Group } from '@/lib/types';
+import { fromBackup, toBackup } from '@/store/backup';
 import { useGroups } from '@/store/groups';
 import { space, useTheme } from '@/theme';
 
@@ -74,6 +80,65 @@ function InstallCard() {
   );
 }
 
+/** Save every group to a file, or put them back from one. */
+function YourData() {
+  const groups = useGroups((state) => state.groups);
+  const replaceAll = useGroups((state) => state.replaceAll);
+  const showToast = useToast((state) => state.show);
+  const [restoring, setRestoring] = useState<{ groups: Group[]; savedAt: string } | null>(null);
+  const count = (n: number) => `${n} group${n === 1 ? '' : 's'}`;
+
+  const save = async () => {
+    try {
+      await saveBackupFile(`quits-backup-${localDate(new Date())}.json`, toBackup(groups));
+      if (Platform.OS === 'web') showToast(`Saved ${count(groups.length)} to a file`);
+    } catch {
+      showToast('The backup couldn’t be saved');
+    }
+  };
+  const pick = async () => {
+    try {
+      const text = await pickBackupFile();
+      if (text === null) return;
+      const restored = fromBackup(text);
+      if (restored.ok) setRestoring(restored);
+      else showToast(restored.reason);
+    } catch {
+      showToast('That file couldn’t be read');
+    }
+  };
+
+  return (
+    <>
+      <Text variant="body" tone="muted">
+        Keep a copy of every group in a file, to move to another device or put back later.
+      </Text>
+      <View style={styles.dataActions}>
+        <Button label="Save a backup" icon="downloadSimple" variant="secondary" onPress={save} testID="save-backup" />
+        <Button label="Restore a backup" icon="uploadSimple" variant="ghost" onPress={pick} testID="restore-backup" />
+      </View>
+      <ConfirmDialog
+        visible={restoring !== null}
+        title="Restore this backup?"
+        message={
+          restoring
+            ? `It has ${count(restoring.groups.length)}${restoring.savedAt ? `, saved ${restoring.savedAt.slice(0, 10)}` : ''}. They replace the ${count(groups.length)} on this device.`
+            : ''
+        }
+        confirmLabel="Replace my groups"
+        icon="uploadSimple"
+        onCancel={() => setRestoring(null)}
+        onConfirm={() => {
+          if (!restoring) return;
+          replaceAll(restoring.groups);
+          setRestoring(null);
+          showToast(`Restored ${count(restoring.groups.length)}`);
+        }}
+      />
+    </>
+  );
+}
+
 export default function AboutScreen() {
   const theme = useTheme();
   const resetDemo = useGroups((state) => state.resetDemo);
@@ -114,6 +179,9 @@ export default function AboutScreen() {
           <InstallCard />
         </View>
 
+        <SectionLabel>Your data</SectionLabel>
+        <YourData />
+
         <SectionLabel>Made with</SectionLabel>
         <Text variant="body" tone="muted">
           React Native, Expo Router, TypeScript, Reanimated, Zustand and react-native-svg. The same code runs on iOS, Android and the web.
@@ -141,4 +209,5 @@ export default function AboutScreen() {
 const styles = StyleSheet.create({
   point: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
   actions: { gap: space(3), marginTop: space(8) },
+  dataActions: { gap: space(2), marginTop: space(3) },
 });
