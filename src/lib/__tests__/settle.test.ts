@@ -43,7 +43,27 @@ describe('settle', () => {
   });
 
   it('has nothing to do when everyone is square', () => {
-    expect(settle({ a: 0, b: 0 })).toEqual({ transfers: [], method: 'exact' });
+    expect(settle({ a: 0, b: 0 })).toEqual({ transfers: [], method: 'exact', circles: [] });
+  });
+
+  it('names the circles that cancel out', () => {
+    const { circles, transfers } = settle({ a: 10, b: -10, c: 5, d: 2, e: -7, f: 0 });
+    expect(circles.map((circle) => [...circle].sort())).toEqual(expect.arrayContaining([['a', 'b'], ['c', 'd', 'e']]));
+    expect(circles).toHaveLength(2);
+    expect(transfers).toHaveLength(3);
+  });
+
+  it('settles each circle in one payment fewer than its size', () => {
+    fc.assert(
+      fc.property(groupArbitrary, ({ ids, expenses, payments }) => {
+        const balance = balancesOf(ids, expenses, payments);
+        const { circles, transfers } = settle(balance);
+        const owing = ids.filter((id) => balance[id] !== 0).sort();
+        expect(circles.flat().sort()).toEqual(owing);
+        for (const circle of circles) expect(circle.reduce((sum, id) => sum + balance[id], 0)).toBe(0);
+        expect(transfers).toHaveLength(owing.length - circles.length);
+      })
+    );
   });
 
   it('beats the greedy match when people fall into separate circles', () => {

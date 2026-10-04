@@ -33,7 +33,8 @@ type GroupsState = {
   removeExpense: (groupId: string, expenseId: string) => Expense | undefined;
   restoreExpense: (groupId: string, expense: Expense) => void;
   recordPayment: (groupId: string, payment: NewPayment) => string;
-  removePayment: (groupId: string, paymentId: string) => void;
+  removePayment: (groupId: string, paymentId: string) => Payment | undefined;
+  restorePayment: (groupId: string, payment: Payment) => void;
   resetDemo: () => void;
 };
 
@@ -161,11 +162,25 @@ export const useGroups = create<GroupsState>()(
         return id;
       },
 
-      removePayment: (groupId, paymentId) =>
+      removePayment: (groupId, paymentId) => {
+        const removed = get()
+          .groups.find((group) => group.id === groupId)
+          ?.payments.find((payment) => payment.id === paymentId);
         set({
           groups: updateGroup(get().groups, groupId, (group) => ({
             ...group,
             payments: group.payments.filter((payment) => payment.id !== paymentId),
+            updatedAt: Date.now(),
+          })),
+        });
+        return removed;
+      },
+
+      restorePayment: (groupId, payment) =>
+        set({
+          groups: updateGroup(get().groups, groupId, (group) => ({
+            ...group,
+            payments: group.payments.some((item) => item.id === payment.id) ? group.payments : [...group.payments, payment],
             updatedAt: Date.now(),
           })),
         }),
