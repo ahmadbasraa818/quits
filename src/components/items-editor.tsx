@@ -66,26 +66,28 @@ export function ItemsEditor({
               keyboardType="decimal-pad"
               style={styles.price}
             />
-            <IconButton icon="x" label={`Remove item ${index + 1}`} onPress={() => onChange(items.filter((other) => other.key !== item.key))} />
           </View>
-          <View style={styles.people} accessibilityRole="none">
-            {people.map((member) => {
-              const had = item.among.includes(member.id);
-              const name = nameOf(group, member.id);
-              return (
-                <PressableScale
-                  key={member.id}
-                  testID={`item-${index}-${member.id}`}
-                  accessibilityRole="checkbox"
-                  aria-checked={had}
-                  accessibilityLabel={`${name} had ${item.label.trim() || `item ${index + 1}`}`}
-                  onPress={() => update(item.key, { among: had ? item.among.filter((id) => id !== member.id) : [...item.among, member.id] })}
-                  style={[styles.person, { borderColor: had ? theme.brand : 'transparent', opacity: had ? 1 : 0.45 }]}
-                >
-                  <Avatar member={member} size={30} />
-                </PressableScale>
-              );
-            })}
+          <View style={styles.row}>
+            <View style={styles.people} accessibilityRole="none">
+              {people.map((member) => {
+                const had = item.among.includes(member.id);
+                const name = nameOf(group, member.id);
+                return (
+                  <PressableScale
+                    key={member.id}
+                    testID={`item-${index}-${member.id}`}
+                    accessibilityRole="checkbox"
+                    aria-checked={had}
+                    accessibilityLabel={`${name} had ${item.label.trim() || `item ${index + 1}`}`}
+                    onPress={() => update(item.key, { among: had ? item.among.filter((id) => id !== member.id) : [...item.among, member.id] })}
+                    style={[styles.person, { borderColor: had ? theme.brand : 'transparent', opacity: had ? 1 : 0.45 }]}
+                  >
+                    <Avatar member={member} size={30} />
+                  </PressableScale>
+                );
+              })}
+            </View>
+            <IconButton icon="trash" label={`Remove item ${index + 1}`} onPress={() => onChange(items.filter((other) => other.key !== item.key))} />
           </View>
           {item.among.length === 0 ? (
             <Text variant="caption" tone="muted">
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
   // minWidth 0 lets the field shrink below a text input's own width on the web.
   label: { flex: 1, minWidth: 0, minHeight: 44 },
   price: { width: 88, minHeight: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  people: { flexDirection: 'row', flexWrap: 'wrap', gap: space(1.5) },
+  people: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: space(1.5) },
   person: { borderWidth: 2, borderRadius: radius.pill, padding: 1 },
   extras: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
 });

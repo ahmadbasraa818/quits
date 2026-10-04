@@ -14,7 +14,7 @@
   ·
   <a href="#the-fewest-payments">How it settles up</a>
   ·
-  <a href="#how-its-built">How it’s built</a>
+  <a href="docs/ARCHITECTURE.md">Architecture</a>
 </p>
 
 <p align="center">
@@ -24,29 +24,115 @@
   <img src="https://img.shields.io/badge/license-MIT-16171A" alt="MIT licence">
 </p>
 
-![Quits: the groups list, the settle-up plan for a trip, and adding an expense in dark mode](docs/hero.png)
+![Quits: the groups list, the plan that settles a five-person trip in four payments with a diagram of who pays whom, and the trip's spending by category in dark mode](docs/hero.png)
+
+Quits keeps a running score of who paid for what on a trip, in a flat or on a night out, then works out the fewest payments that make everyone square. One TypeScript codebase runs it on iOS, Android and the web. It works offline, and your groups stay on your device: there is no server.
+
+## Highlights
+
+- **Provably the fewest payments.** A dynamic program over every subset of people finds the true minimum, not a greedy guess, and the app explains why the plan can't be shorter. [How it works](#the-fewest-payments)
+- **Exact to the penny, in any currency.** Money is held in integers and split by the largest remainder method, and currencies are converted in BigInt at the European Central Bank's rate for the day. [How it works](#fair-to-the-penny)
+- **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
+- **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
+- **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
+- **Tested like it matters.** 285 unit, property and component tests and 73 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
-- **Groups** for a trip, a flat or a night out, in any of 33 currencies. Rename them, add people, mark who has left, or delete a group and undo it.
-- **Pay in one currency, settle in another:** each expense can be in its own currency, converted at the European Central Bank’s rate for its date or at a rate you type, fixed when you save it.
-- **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
-- **Quick add:** type “Ramen ¥4,800, Aiko paid, split with Ben and me” and the expense fills itself in, with anything it assumed marked before you save.
+**Add what everyone paid**
+
+- **Quick add:** type an expense as you'd say it, and see what Quits understood as you type, with anything it assumed marked before you save.
 - **Split any way:** equally, by shares, by exact amounts, or item by item, with tax, service and tip shared in proportion to what everyone had. Every split adds up to the penny.
-- **Sums in any amount field:** “4800÷3” is ¥1,600, worked out exactly, with + − × ÷ buttons for phones.
-- **See where everyone stands:** each balance is a bar either side of zero.
-- **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen, and Quits says why the plan can’t be any shorter.
+- **Sums in any amount field:** “4800÷3” is ¥1,600, worked out exactly, with + − × ÷ keys for phones.
+- **Any of 33 currencies:** each expense can be in its own currency, converted at the ECB's rate for its date or at a rate you type, fixed when you save it.
+- **Dated and noted:** pick the day from a calendar and add a note, change anything later, and undo a delete.
+
+**Settle up**
+
+- **In the fewest payments.** The demo's five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen.
 - **Record payments as they happen:** a whole payment with a tap, part of one, or one made outside the plan, with a history you can undo. Share the plan with the group as a message.
-- **See where the money went:** spending by category, a timeline by day, week or month, and who paid against who used.
+
+**See where the money went**
+
+- **Balances** as bars either side of zero.
 - **Why do I owe this?** Tap anyone in Balances for every expense and payment behind their balance, line by line, adding up exactly.
+- **Spending** by category, a timeline by day, week or month, and who paid against who used.
 - **Find anything:** search expenses and their notes, ignoring case and accents, or narrow the list to a category.
-- **Share a copy without a server:** send a link, and a friend opens their own copy of the group, choosing which person they are. The group travels inside the link. Back up every group to a file and restore it on any device.
-- **An app on the web too:** install it from the browser and it opens without a connection. On a wide screen your groups stay in a sidebar beside whatever's open.
-- **Undo** for deleted expenses and recorded payments, light and dark themes, and screen-reader labels throughout.
+
+**Your data, on your devices**
+
+- **Share a copy by link.** Friends open their own copy and pick which person they are. Share again to send an update.
+- **Back up every group to a file** and restore it on any device: a download on the web, the share sheet on a phone.
+- **Groups for anything:** rename them, add people, mark who has left, or delete a group and undo it.
+
+**Everywhere**
+
+- **Install it from the browser** and it opens without a connection.
+- **On a wide screen** your groups stay in a sidebar beside whatever's open.
+- **Light and dark themes**, reduced motion respected, and screen-reader labels throughout.
 
 <p align="center">
-  <img src="docs/demo.gif" width="300" alt="Opening the Japan trip, comparing the plan with paying pair by pair, and recording each payment until everyone is square">
+  <img src="docs/demo.gif" width="300" alt="Adding karaoke to the Japan trip by typing a sentence, then comparing the plan with paying pair by pair, and recording each payment until everyone is square">
 </p>
+
+## Screens
+
+The screenshots follow your GitHub theme. They're made from the web build by [`scripts/capture.mjs`](scripts/capture.mjs), so they always show the current app.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-add.png">
+        <img src="docs/light-add.png" width="250" alt="Adding an expense: ¥4,800 for karaoke, with keys for sums, the category, who paid and how it's split">
+      </picture>
+      <br><sub><b>Add an expense</b>, with sums in the amount</sub>
+    </td>
+    <td align="center" width="33%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-quick.png">
+        <img src="docs/light-quick.png" width="250" alt="Quick add reading “Karaoke ¥12,000, Aiko paid, for everyone” as ¥12,000 for karaoke, paid by Aiko, split five ways">
+      </picture>
+      <br><sub><b>Quick add</b> reads a sentence</sub>
+    </td>
+    <td align="center" width="33%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-items.png">
+        <img src="docs/light-items.png" width="250" alt="An itemised bill: each okonomiyaki with its price and who had it">
+      </picture>
+      <br><sub><b>Item by item</b>, for the bill at dinner</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-balances.png">
+        <img src="docs/light-balances.png" width="250" alt="Balances: each person's bar either side of zero">
+      </picture>
+      <br><sub><b>Balances</b> either side of zero</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-statement.png">
+        <img src="docs/light-statement.png" width="250" alt="Aiko's statement: what Aiko paid for, Aiko's share, and every expense and payment behind the balance">
+      </picture>
+      <br><sub><b>Why do I owe this?</b> Every line</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-spending.png">
+        <img src="docs/light-spending.png" width="250" alt="Spending by category: a donut chart with transport at 49%">
+      </picture>
+      <br><sub><b>Spending</b> by category and over time</sub>
+    </td>
+  </tr>
+</table>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dark-desktop.png">
+  <img src="docs/light-desktop.png" alt="Quits in a wide browser window: the groups in a sidebar, and the Japan trip's plan to settle up beside them">
+</picture>
+<p align="center"><sub>On a wide screen the groups stay in a sidebar beside whatever's open.</sub></p>
 
 ## The fewest payments
 
@@ -60,6 +146,8 @@ The insight: if the people who are owed or owe can be split into *k* circles who
 - The circles it finds are reported along with the payments, so the app can explain the count: “Their balances cancel out in 2 separate circles: Aiko and Ben; Chloe, Dev and you.”
 
 It is checked, not just argued. Property tests (fast-check) generate hundreds of random groups with every kind of split and confirm, for each one, that the payments clear every balance, use no more than greedy matching, and match an independent backtracking search for the true minimum. One fixed case shows the difference: greedy needs 4 payments where Quits needs 3.
+
+The diagram that draws the plan places each amount beside its arrow. [`placeLabels`](src/lib/graph-layout.ts) tries spots on both sides of the arrow and along it, and keeps the one that covers least: the edge of the drawing, the people, their names, the amounts already placed and the other arrows. Tests check the demo's plans at phone and desktop widths, where every amount covers nothing.
 
 ## Fair to the penny
 
@@ -100,6 +188,25 @@ The demo trip keeps its books in yen, but the JR Passes were bought at home: £1
 
 Quits has no backend: groups live on the device. To share one, [`shareLink`](src/lib/share-link.ts) packs the whole group into the link itself.
 
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-share.png">
+        <img src="docs/light-share.png" width="250" alt="Sharing the Japan trip: your name as friends will see it, and a button to share a link">
+      </picture>
+      <br><sub><b>Sharing</b> the trip as Ahmad</sub>
+    </td>
+    <td align="center" width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-import.png">
+        <img src="docs/light-import.png" width="250" alt="The shared trip opened by a friend, who picks Aiko as the person they are">
+      </picture>
+      <br><sub><b>Opening</b> it as Aiko, in another browser</sub>
+    </td>
+  </tr>
+</table>
+
 - **Packing:** the group's JSON is deflated with fflate and written in URL-safe base64 after a format marker. The Japan trip, all twelve expenses and five people, comes to a link under 4,000 characters.
 - **Privacy:** the group sits after the `#`, which browsers never send to a server. GitHub Pages only ever sees `/quits/import`.
 - **Opening a link:** the receiver says which person they are and gets a copy of their own.
@@ -109,33 +216,56 @@ Quits has no backend: groups live on the device. To share one, [`shareLink`](src
 
 ## How it’s built
 
+```mermaid
+flowchart LR
+  app["<b>Screens</b><br>src/app"] --> components["<b>Components</b><br>src/components"]
+  components --> store["<b>Store</b><br>src/store"]
+  store --> lib["<b>Logic</b><br>src/lib"]
+  store <--> device[("Saved on the device")]
+  lib -. "a currency pair and a date" .-> ecb[("ECB rates")]
+  lib -. "the group, after the #" .-> link[("A share link")]
+```
+
+Each layer can use any layer below it, never one above. The logic in `src/lib` has no React in it, so the arithmetic that matters (money, splits, balances, settling up, conversion, parsing) is tested directly, and the screens stay thin. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) goes through the layers and the decisions behind them.
+
 | | |
 |---|---|
 | App | Expo SDK 57, React Native 0.86 and React 19, with the React Compiler; one codebase for iOS, Android and the web |
 | Navigation | Expo Router with typed routes; modal screens for adding and editing; from 960 points wide, the groups in a sidebar beside the stack |
-| State | Zustand, persisted with AsyncStorage. On the web it falls back to memory if the browser blocks storage, so the demo still works when embedded in another site. |
+| State | Zustand, persisted with AsyncStorage and migrated between versions. On the web it falls back to memory if the browser blocks storage, so the demo still works when embedded in another site. |
 | Motion | Reanimated 4: the settle-up graph redrawing, charts growing in, sliding tab marker, list layout transitions and press feedback, all off when the system asks for reduced motion |
 | Gestures | React Native Gesture Handler: swipe an expense to delete it |
-| Graphics | react-native-svg for the settle-up graph and the charts, and a generated subset of Phosphor icons (49 of them, not the whole set) |
+| Graphics | react-native-svg for the settle-up graph and the charts, and a generated subset of Phosphor icons (51 of them, not the whole set) |
+| Files | fflate for share links; expo-file-system, expo-sharing and expo-document-picker for backups on phones, a download and the file picker on the web |
 | Web app | A manifest and a service worker written at build time: it keeps every file of the current version, keyed by a hash of their contents, serves pages from the network first so a deploy shows at once, and opens the kept copy offline |
 | Type | Archivo, loaded per weight |
 
 ```
 src/
-  app/          screens (Expo Router): groups, a group, add or edit an expense, new group, about
-  components/   buttons, chips, segmented control, avatars, balance bars, settle-up diagram, toasts
-  lib/          the logic, with no React in it: money, splits, balances, settling up
-  store/        the persisted store, the per-group summary and the demo data
+  app/          screens: the groups, a group, an expense, a person's statement, spending, settings, import
+  components/   sheets, charts, the settle-up graph, the item editor, quick add, toasts
+  lib/          the logic, with no React in it: money, splits, balances, settling up, conversion,
+                quick add, sums, share links, validation and the graph's layout
+  store/        the persisted store, migrations, backups, the demo data and cached rates
   theme/        colours for light and dark, type and spacing
 e2e/            Playwright tests against the web build
-scripts/        icons, web export, screenshots
+scripts/        icons, the web export and its service worker, screenshots
 ```
 
 ## Quality
 
-- **271 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **73 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; share a copy to a second, empty browser that opens it as another person; save and restore a backup; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of sixteen screens and sheets in light and dark mode.
-- **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
+- **285 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **73 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+  - add, edit, delete and undo; date an expense; create, edit and delete groups;
+  - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
+  - read the spending charts and a person’s statement; search and filter;
+  - add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum;
+  - pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection;
+  - share a copy to a second, empty browser that opens it as another person; save and restore a backup;
+  - keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; follow a deep link;
+  - and run axe accessibility scans of sixteen screens and sheets in light and dark mode.
+- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back have been run on iOS, in Expo Go on the simulator.
+- **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
 ## Run it
 
@@ -143,9 +273,12 @@ scripts/        icons, web export, screenshots
 npm install
 npm start                 # then press w for the web, i for the iOS simulator, a for Android
 npm test                  # unit, property and component tests
+npm run lint && npm run typecheck
 npm run export:web        # the web build, in dist/
 npm run e2e               # end-to-end tests against that build
 ```
+
+To retake the screenshots and the demo, serve the build with `node scripts/serve-dist.mjs 4173` and run `node scripts/capture.mjs`, then `python scripts/compose-hero.py` for the image at the top.
 
 ## Licence
 
