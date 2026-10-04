@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button, IconButton } from '@/components/button';
 import { GroupCard, openGroup, Overview, useSplitView } from '@/components/group-list';
 import { Icon, IconName } from '@/components/icon';
+import { Notices } from '@/components/notices';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useGroups } from '@/store/groups';
@@ -28,6 +29,7 @@ function Welcome() {
         <Text variant="body" tone="muted" style={styles.tagline}>
           Split costs with friends. Settle up in the fewest payments.
         </Text>
+        <Notices />
         <View style={{ gap: space(3) }}>
           {FEATURES.map((feature) => (
             <Card key={feature.title} style={styles.feature}>
@@ -69,6 +71,7 @@ export default function GroupsScreen() {
         <Text variant="body" tone="muted" style={styles.tagline}>
           Split costs with friends. Settle up in the fewest payments.
         </Text>
+        <Notices />
         <Overview groups={groups} />
         <SectionLabel>Groups</SectionLabel>
         <View style={styles.list}>
