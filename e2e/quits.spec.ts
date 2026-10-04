@@ -533,6 +533,8 @@ test('opens a deep link straight to a group', async ({ page }) => {
 test.describe('accessibility', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`has no axe violations on the main screens in ${scheme} mode`, async ({ page }) => {
+      // Sixteen scans take about 30 seconds on CI, the default limit.
+      test.slow();
       // Scan settled screens, not frames of a fade: ask for reduced motion, as some visitors do.
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
       const scan = async (where: string) => {
