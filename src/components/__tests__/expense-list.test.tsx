@@ -6,6 +6,8 @@ import { useGroups } from '@/store/groups';
 import { ExpenseList } from '../expense-list';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+// Swiping is tested by hand and end to end; here the rows only need to render.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => ({ __esModule: true, default: ({ children }: { children: unknown }) => children }));
 
 const japan = () => useGroups.getState().groups.find((group) => group.id === 'demo_japan')!;
 
