@@ -1,18 +1,21 @@
 import { daysAgo } from '@/lib/dates';
+import { convert, Rate } from '@/lib/fx';
 import type { Expense, Group, Payment } from '@/lib/types';
 
-type Draft = Omit<Expense, 'id' | 'createdAt' | 'date'> & { days: number };
+/** The demo changes with the app: 2 added an expense paid in pounds to the Japan trip. */
+export const DEMO_VERSION = 2;
+
+/** An expense `days` ago, and the demo version that first had it. */
+type Draft = Omit<Expense, 'id' | 'createdAt' | 'date'> & { days: number; since?: number };
 type PaymentDraft = Omit<Payment, 'id' | 'createdAt' | 'date'> & { days: number };
 
-function build(prefix: string, base: Omit<Group, 'expenses' | 'payments'>, drafts: Draft[], payments: PaymentDraft[], now: Date): Group {
+function build(prefix: string, base: Omit<Group, 'expenses' | 'payments'>, drafts: Draft[], payments: PaymentDraft[], now: Date, version: number): Group {
   return {
     ...base,
-    expenses: drafts.map(({ days, ...draft }, index) => ({
-      ...draft,
-      id: `${prefix}_e${index}`,
-      date: daysAgo(days, now),
-      createdAt: now.getTime() - days * 86_400_000 + index,
-    })),
+    // Ids come from each draft's place in the full list, so they stay the same in every version.
+    expenses: drafts.flatMap(({ days, since = 1, ...draft }, index) =>
+      since > version ? [] : [{ ...draft, id: `${prefix}_e${index}`, date: daysAgo(days, now), createdAt: now.getTime() - days * 86_400_000 + index }]
+    ),
     payments: payments.map(({ days, ...payment }, index) => ({
       ...payment,
       id: `${prefix}_p${index}`,
@@ -22,8 +25,10 @@ function build(prefix: string, base: Omit<Group, 'expenses' | 'payments'>, draft
   };
 }
 
+const jrRate: Rate = { base: 'GBP', value: '207.31' };
+
 /** The groups a first-time visitor sees: a trip, a flat, and one already settled. */
-export function demoGroups(now = new Date()): Group[] {
+export function demoGroups(now = new Date(), version = DEMO_VERSION): Group[] {
   const japan = build(
     'japan',
     {
@@ -51,9 +56,20 @@ export function demoGroups(now = new Date()): Group[] {
       { days: 28, description: 'Deer crackers in Nara', amount: 1000, paidBy: 'dev', category: 'other', split: { kind: 'equal', among: ['you', 'aiko', 'ben', 'chloe', 'dev'] } },
       { days: 28, description: 'Rain jackets', amount: 8980, paidBy: 'chloe', category: 'shopping', split: { kind: 'exact', amounts: { chloe: 4490, dev: 4490 } } },
       { days: 27, description: 'Suica top-ups', amount: 10000, paidBy: 'aiko', category: 'transport', split: { kind: 'equal', among: ['aiko', 'chloe'] } },
+      {
+        days: 38,
+        since: 2,
+        description: 'JR Passes, bought at home',
+        amount: convert(131000, 'GBP', 'JPY', jrRate),
+        original: { amount: 131000, currency: 'GBP', rate: jrRate },
+        paidBy: 'ben',
+        category: 'transport',
+        split: { kind: 'equal', among: ['you', 'aiko', 'ben', 'chloe', 'dev'] },
+      },
     ],
     [],
-    now
+    now,
+    version
   );
 
   const flat = build(
@@ -78,7 +94,8 @@ export function demoGroups(now = new Date()): Group[] {
       { days: 1, description: 'Pizza night', amount: 3660, paidBy: 'priya', category: 'food', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },
     ],
     [],
-    now
+    now,
+    version
   );
 
   const brighton = build(
@@ -103,7 +120,8 @@ export function demoGroups(now = new Date()): Group[] {
       { days: 74, from: 'tom', to: 'mia', amount: 2950 },
       { days: 74, from: 'you', to: 'mia', amount: 250 },
     ],
-    now
+    now,
+    version
   );
 
   return [japan, flat, brighton];

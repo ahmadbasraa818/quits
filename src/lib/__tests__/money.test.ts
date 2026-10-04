@@ -96,6 +96,9 @@ describe('the currencies', () => {
     expect(searchCurrencies('dollar')).toEqual(expect.arrayContaining(['USD', 'AUD', 'CAD', 'NZD', 'SGD', 'HKD', 'TWD']));
     expect(searchCurrencies('  ')).toEqual(CURRENCY_CODES);
     expect(searchCurrencies('doubloons')).toEqual([]);
+    expect(searchCurrencies('dong')).toEqual(['VND']);
+    expect(searchCurrencies('Zloty')).toEqual(['PLN']);
+    expect(searchCurrencies('krona')).toEqual(expect.arrayContaining(['ISK', 'SEK']));
   });
 
   it('knows its own codes', () => {

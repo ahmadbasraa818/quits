@@ -1,23 +1,37 @@
 import * as fc from 'fast-check';
 
+import { convert, parseRateValue, Rate } from '../fx';
 import { allocate } from '../split';
 import type { Expense, Payment } from '../types';
 
-/** A random group: 2 to 9 people, up to 15 expenses split every which way, and a few payments. */
+/** A random group in pounds: 2 to 9 people, up to 15 expenses split every which way, some paid in other currencies, and a few payments. */
 export const groupArbitrary = fc.integer({ min: 2, max: 9 }).chain((size) => {
   const ids = Array.from({ length: size }, (_, i) => `m${i}`);
+  // Sometimes paid in another currency, at a random rate, in a group that keeps pounds.
+  const foreign = fc.option(
+    fc.record({
+      currency: fc.constantFrom('USD', 'EUR', 'JPY', 'KRW' as const),
+      value: fc.integer({ min: 1, max: 2_000_000 }).map((n) => parseRateValue(String(n / 1000))!),
+      base: fc.boolean(),
+    }),
+    { nil: undefined }
+  );
   const expense = fc
     .record({
-      amount: fc.integer({ min: 1, max: 500_000 }),
+      paid: fc.integer({ min: 1, max: 500_000 }),
       paidBy: fc.constantFrom(...ids),
       kind: fc.constantFrom('equal', 'shares', 'exact'),
       weights: fc.array(fc.integer({ min: 0, max: 4 }), { minLength: size, maxLength: size }).filter((w) => w.some((x) => x > 0)),
+      foreign,
     })
-    .map(({ amount, paidBy, kind, weights }, ): Expense => {
-      const base = { id: 'e', description: 'x', amount, paidBy, category: 'other' as const, date: '2026-11-21', createdAt: 0 };
+    .map(({ paid, paidBy, kind, weights, foreign: other }): Expense => {
+      const rate: Rate | undefined = other && { base: other.base ? other.currency : 'GBP', value: other.value };
+      const original = other && rate ? { amount: paid, currency: other.currency, rate } : undefined;
+      const amount = original ? convert(paid, original.currency, 'GBP', original.rate) : paid;
+      const base = { id: 'e', description: 'x', amount, original, paidBy, category: 'other' as const, date: '2026-11-21', createdAt: 0 };
       if (kind === 'equal') return { ...base, split: { kind, among: ids.filter((_, i) => weights[i] > 0) } };
       if (kind === 'shares') return { ...base, split: { kind, shares: Object.fromEntries(ids.map((id, i) => [id, weights[i]])) } };
-      const parts = allocate(amount, weights);
+      const parts = allocate(paid, weights);
       return { ...base, split: { kind, amounts: Object.fromEntries(ids.map((id, i) => [id, parts[i]])) } };
     });
   const payment = fc

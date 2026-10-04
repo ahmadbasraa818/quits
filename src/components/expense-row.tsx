@@ -3,7 +3,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 
 import { categoryOf } from '@/lib/categories';
 import { formatMoney } from '@/lib/money';
-import { sharesOf } from '@/lib/split';
+import { expenseShares } from '@/lib/split';
 import type { Expense, Group } from '@/lib/types';
 import { radius, space, useTheme } from '@/theme';
 
@@ -13,7 +13,7 @@ import { Text } from './text';
 
 /** What an expense did to your balance: what you lent, or what you owe. */
 export function yourPart(expense: Expense, me: string): { kind: 'lent' | 'owe' | 'none'; amount: number } {
-  const share = sharesOf(expense.amount, expense.split)[me] ?? 0;
+  const share = expenseShares(expense)[me] ?? 0;
   if (expense.paidBy === me) {
     const lent = expense.amount - share;
     return lent > 0 ? { kind: 'lent', amount: lent } : { kind: 'none', amount: 0 };
@@ -26,6 +26,9 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
   const category = categoryOf(expense.category);
   const payer = expense.paidBy === group.me ? 'You' : group.members.find((member) => member.id === expense.paidBy)?.name ?? 'Someone';
   const part = yourPart(expense, group.me);
+  // Paid in another currency, the receipt's amount is the one people recognise.
+  const paid = expense.original ? formatMoney(expense.original.amount, expense.original.currency) : formatMoney(expense.amount, group.currency);
+  const amountLabel = expense.original ? `${paid}, which is ${formatMoney(expense.amount, group.currency)}` : paid;
   const partText =
     part.kind === 'lent'
       ? `you lent ${formatMoney(part.amount, group.currency)}`
@@ -52,7 +55,7 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
       <PressableScale
         testID={`expense-${expense.id}`}
         accessibilityRole="button"
-        accessibilityLabel={`${expense.description}, ${formatMoney(expense.amount, group.currency)}, paid by ${payer}, ${partText}`}
+        accessibilityLabel={`${expense.description}, ${amountLabel}, paid by ${payer}, ${partText}`}
         accessibilityHint="Opens the expense to edit it"
         onPress={onPress}
         style={[styles.row, { backgroundColor: theme.card }]}
@@ -70,7 +73,7 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
         </View>
         <View style={styles.end}>
           <Text variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
-            {formatMoney(expense.amount, group.currency)}
+            {paid}
           </Text>
           <Text variant="caption" tone={part.kind === 'lent' ? 'positive' : part.kind === 'owe' ? 'negative' : 'muted'} style={{ fontVariant: ['tabular-nums'] }}>
             {partText}

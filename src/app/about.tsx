@@ -24,6 +24,11 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
     body: 'Quits looks for the most circles of people whose debts cancel out. A group that splits into k such circles settles in n − k payments, and no fewer. It checks every way for groups of up to 16, in a blink.',
   },
   {
+    icon: 'globeHemisphereWest',
+    title: 'Any of 33 currencies',
+    body: 'Pay in one currency and settle in another. Quits converts at the European Central Bank’s rate for the day, looked up through frankfurter.dev, which is the only time it goes online. You can type your own rate instead. The rate is fixed when you save, and the sums are exact.',
+  },
+  {
     icon: 'checkCircle',
     title: 'Tested on thousands of groups',
     body: 'Property tests generate random groups and check every settlement against an independent search for the true minimum.',

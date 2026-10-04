@@ -7,6 +7,7 @@ import type { CurrencyCode } from '@/lib/money';
 import type { Expense, Group, Member, Payment } from '@/lib/types';
 
 import { demoGroups } from './demo';
+import { migrate, STORE_VERSION } from './migrations';
 import { safeStorage } from './storage';
 
 export type NewExpense = Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>;
@@ -173,7 +174,8 @@ export const useGroups = create<GroupsState>()(
     }),
     {
       name: 'quits',
-      version: 1,
+      version: STORE_VERSION,
+      migrate,
       storage: createJSONStorage(() => safeStorage),
       partialize: (state) => ({ groups: state.groups }),
       onRehydrateStorage: () => () => {
