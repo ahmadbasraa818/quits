@@ -33,7 +33,8 @@
 - **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
 - **Split any way:** equally, by shares, or by exact amounts. Every split adds up to the penny.
 - **See where everyone stands:** each balance is a bar either side of zero.
-- **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair, and the app draws both so you can see the difference.
+- **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen, and Quits says why the plan can’t be any shorter.
+- **Record payments as they happen:** a whole payment with a tap, part of one, or one made outside the plan, with a history you can undo. Share the plan with the group as a message.
 - **Undo** for deleted expenses and recorded payments, light and dark themes, and screen-reader labels throughout.
 
 <p align="center">
@@ -49,6 +50,7 @@ The insight: if the people who are owed or owe can be split into *k* circles who
 - `groups[mask]` is the most zero-sum circles among the people in `mask`, taken in some order. It is the best over each person `i` of `groups[mask without i]`, plus one if `mask` itself sums to zero.
 - Walking back from the full set recovers an order in which the running total returns to zero at the end of each circle. Each circle then settles in one payment fewer than its size.
 - That is O(2ⁿ · n): instant for up to 16 people with an open balance. Larger groups fall back to matching the largest debtor with the largest creditor.
+- The circles it finds are reported along with the payments, so the app can explain the count: “Their balances cancel out in 2 separate circles: Aiko and Ben; Chloe, Dev and you.”
 
 It is checked, not just argued. Property tests (fast-check) generate hundreds of random groups with every kind of split and confirm, for each one, that the payments clear every balance, use no more than greedy matching, and match an independent backtracking search for the true minimum. One fixed case shows the difference: greedy needs 4 payments where Quits needs 3.
 
@@ -93,8 +95,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **159 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **40 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of ten screens and sheets in light and dark mode.
+- **171 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **46 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of eleven screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it

@@ -13,6 +13,11 @@ export function nameOf(group: Pick<Group, 'members' | 'me'>, id: string): string
   return group.members.find((member) => member.id === id)?.name ?? 'Someone';
 }
 
+/** A name as it reads mid-sentence: "you" for the person using the app. */
+export function nameInSentence(group: Pick<Group, 'members' | 'me'>, id: string): string {
+  return id === group.me ? 'you' : nameOf(group, id);
+}
+
 /** The people who can be picked for a new expense: everyone who hasn't left. */
 export function activeMembers(group: Pick<Group, 'members'>): Member[] {
   return group.members.filter((member) => !member.left);

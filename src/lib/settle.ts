@@ -3,7 +3,16 @@ import type { Transfer } from './balances';
 /** Groups up to this many unsettled people are settled exactly; larger ones greedily. */
 export const EXACT_LIMIT = 16;
 
-export type Settlement = { transfers: Transfer[]; method: 'exact' | 'greedy' };
+export type Settlement = {
+  transfers: Transfer[];
+  method: 'exact' | 'greedy';
+  /**
+   * The groups of people whose balances cancel out among themselves, each
+   * settling in one payment fewer than its size. Greedy settling doesn't
+   * look for them, so it reports everyone as one.
+   */
+  circles: string[][];
+};
 
 type Entry = { id: string; amount: number };
 
@@ -21,8 +30,11 @@ export function settle(balance: Record<string, number>): Settlement {
   const entries = Object.entries(balance)
     .filter(([, amount]) => amount !== 0)
     .map(([id, amount]) => ({ id, amount }));
-  if (entries.length <= EXACT_LIMIT) return { transfers: exactSettle(entries), method: 'exact' };
-  return { transfers: greedySettle(entries), method: 'greedy' };
+  if (entries.length <= EXACT_LIMIT) {
+    const circles = zeroSumCircles(entries);
+    return { transfers: circles.flatMap((circle) => greedySettle(circle)), method: 'exact', circles: circles.map((circle) => circle.map((entry) => entry.id)) };
+  }
+  return { transfers: greedySettle(entries), method: 'greedy', circles: entries.length > 0 ? [entries.map((entry) => entry.id)] : [] };
 }
 
 /** Matches the largest debtor with the largest creditor until everyone is square. */
@@ -44,6 +56,11 @@ export function greedySettle(entries: Entry[]): Transfer[] {
 
 /** The provably fewest payments, by splitting people into as many zero-sum groups as possible. */
 export function exactSettle(entries: Entry[]): Transfer[] {
+  return zeroSumCircles(entries).flatMap((circle) => greedySettle(circle));
+}
+
+/** The most groups whose balances each add up to zero that the people can be split into. */
+export function zeroSumCircles(entries: Entry[]): Entry[][] {
   const n = entries.length;
   if (n === 0) return [];
   const full = (1 << n) - 1;
@@ -81,16 +98,16 @@ export function exactSettle(entries: Entry[]): Transfer[] {
   }
   order.reverse();
 
-  const transfers: Transfer[] = [];
-  let group: Entry[] = [];
+  const circles: Entry[][] = [];
+  let circle: Entry[] = [];
   let running = 0;
   for (const index of order) {
-    group.push(entries[index]);
+    circle.push(entries[index]);
     running += entries[index].amount;
     if (running === 0) {
-      transfers.push(...greedySettle(group));
-      group = [];
+      circles.push(circle);
+      circle = [];
     }
   }
-  return transfers;
+  return circles;
 }

@@ -24,8 +24,57 @@ test('settles the Japan trip in 4 payments instead of 10', async ({ page }) => {
   await tab(page, 'Settle up').click();
   await expect(page.getByTestId('settle-headline')).toHaveText('4 payments settle everyone');
   await expect(page.getByText('Paying back pair by pair would take 10.')).toBeVisible();
+  const arrows = page.getByTestId('settle-graph').locator('line[stroke-opacity="1"]');
+  await expect(arrows).toHaveCount(4);
   await page.getByRole('tab', { name: 'Pair by pair (10)' }).click();
   await expect(page.getByRole('tab', { name: 'Pair by pair (10)' })).toHaveAttribute('aria-selected', 'true');
+  // The graph redraws: ten arrows, one for every pair that owes.
+  await expect(arrows).toHaveCount(10);
+  await expect(page.getByTestId('settle-explanation')).toHaveText('5 people are owed or owe, and their balances only cancel out all together, so 4 payments is the fewest possible.');
+});
+
+test('records part of a payment, and the plan follows', async ({ page }) => {
+  await openGroup(page, 'Japan trip');
+  await tab(page, 'Settle up').click();
+  await page.getByRole('button', { name: 'Aiko pays You ¥29,359' }).click();
+  await expect(page.getByLabel('Amount in Japanese yen')).toHaveValue('29359');
+  await page.getByLabel('Amount in Japanese yen').fill('10000');
+  await expect(page.getByTestId('payment-partial')).toHaveText('Part of the ¥29,359: ¥19,359 will still be owed.');
+  await page.getByTestId('payment-note').fill('PayPay');
+  await page.getByTestId('save-payment').click();
+  await expect(page.getByRole('button', { name: 'Aiko pays You ¥19,359' })).toBeVisible();
+  await expect(page.getByLabel(/^Aiko paid you ¥10,000, Today, PayPay$/)).toBeVisible();
+});
+
+test('deletes a recorded payment, and undo brings it back', async ({ page }) => {
+  await openGroup(page, 'Brighton day trip');
+  await tab(page, 'Settle up').click();
+  await expect(page.getByRole('heading', { name: 'Everyone’s square' })).toBeVisible();
+  await page.getByRole('button', { name: 'Delete the payment: Tom paid Mia £29.50' }).click();
+  await expect(page.getByTestId('settle-headline')).toHaveText('One payment settles everyone');
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('heading', { name: 'Everyone’s square' })).toBeVisible();
+});
+
+test('shares the plan, copying it where the browser can’t share', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined }));
+  await openGroup(page, 'Japan trip');
+  await tab(page, 'Settle up').click();
+  await page.getByTestId('share-plan').click();
+  await expect(page.getByText('Plan copied, ready to paste')).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe(
+    [
+      'Settling up for Japan trip:',
+      '• Chloe pays Ben ¥118,305',
+      '• Aiko pays Ben ¥85,146',
+      '• Aiko pays me ¥29,359',
+      '• Dev pays me ¥19,265',
+      '',
+      '4 payments instead of 10 pair by pair, worked out with Quits: https://ahmadbasraa818.github.io/quits/',
+    ].join('\n')
+  );
 });
 
 test('adds an expense split between some of the group', async ({ page }) => {
@@ -65,6 +114,7 @@ test('records every payment until everyone is square', async ({ page }) => {
     await page.getByRole('button', { name: 'Mark paid' }).first().click();
   }
   await expect(page.getByRole('heading', { name: 'Everyone’s square' })).toBeVisible();
+  await expect(page.getByTestId('payments-made').getByRole('button', { name: /^Delete the payment/ })).toHaveCount(4);
   await tab(page, 'Balances').click();
   await expect(page.getByLabel('You are square')).toBeVisible();
 });
@@ -267,6 +317,9 @@ test.describe('accessibility', () => {
       await scan('balances');
       await tab(page, 'Settle up').click();
       await scan('settle up');
+      await page.getByTestId('record-payment-button').click();
+      await scan('record a payment');
+      await page.keyboard.press('Escape');
       await tab(page, 'Expenses').click();
       await page.getByTestId('add-expense').click();
       await scan('add expense');
