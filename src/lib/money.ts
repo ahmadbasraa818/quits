@@ -5,6 +5,8 @@
 
 type CurrencyInfo = {
   name: string;
+  /** For "amount in Japanese yen", "how many euros": never just name + "s". */
+  plural: string;
   /** Written before the number. Letters get a trailing space: "CHF 12.00". */
   symbol: string;
   /** Digits after the decimal point, from ISO 4217: 2 for pounds, 0 for yen. */
@@ -14,39 +16,39 @@ type CurrencyInfo = {
 };
 
 export const CURRENCIES = {
-  GBP: { name: 'British pound', symbol: '£', decimals: 2, liveRate: true },
-  EUR: { name: 'Euro', symbol: '€', decimals: 2, liveRate: true },
-  USD: { name: 'US dollar', symbol: '$', decimals: 2, liveRate: true },
-  JPY: { name: 'Japanese yen', symbol: '¥', decimals: 0, liveRate: true },
-  AUD: { name: 'Australian dollar', symbol: 'A$', decimals: 2, liveRate: true },
-  BRL: { name: 'Brazilian real', symbol: 'R$', decimals: 2, liveRate: true },
-  CAD: { name: 'Canadian dollar', symbol: 'C$', decimals: 2, liveRate: true },
-  CHF: { name: 'Swiss franc', symbol: 'CHF ', decimals: 2, liveRate: true },
-  CNY: { name: 'Chinese yuan', symbol: 'CN¥', decimals: 2, liveRate: true },
-  CZK: { name: 'Czech koruna', symbol: 'CZK ', decimals: 2, liveRate: true },
-  DKK: { name: 'Danish krone', symbol: 'DKK ', decimals: 2, liveRate: true },
-  HKD: { name: 'Hong Kong dollar', symbol: 'HK$', decimals: 2, liveRate: true },
-  HUF: { name: 'Hungarian forint', symbol: 'HUF ', decimals: 2, liveRate: true },
-  IDR: { name: 'Indonesian rupiah', symbol: 'IDR ', decimals: 2, liveRate: true },
-  ILS: { name: 'Israeli shekel', symbol: '₪', decimals: 2, liveRate: true },
-  INR: { name: 'Indian rupee', symbol: '₹', decimals: 2, liveRate: true },
-  ISK: { name: 'Icelandic króna', symbol: 'ISK ', decimals: 0, liveRate: true },
-  KRW: { name: 'South Korean won', symbol: '₩', decimals: 0, liveRate: true },
-  MXN: { name: 'Mexican peso', symbol: 'MX$', decimals: 2, liveRate: true },
-  MYR: { name: 'Malaysian ringgit', symbol: 'RM', decimals: 2, liveRate: true },
-  NOK: { name: 'Norwegian krone', symbol: 'NOK ', decimals: 2, liveRate: true },
-  NZD: { name: 'New Zealand dollar', symbol: 'NZ$', decimals: 2, liveRate: true },
-  PHP: { name: 'Philippine peso', symbol: '₱', decimals: 2, liveRate: true },
-  PLN: { name: 'Polish złoty', symbol: 'PLN ', decimals: 2, liveRate: true },
-  RON: { name: 'Romanian leu', symbol: 'RON ', decimals: 2, liveRate: true },
-  SEK: { name: 'Swedish krona', symbol: 'SEK ', decimals: 2, liveRate: true },
-  SGD: { name: 'Singapore dollar', symbol: 'S$', decimals: 2, liveRate: true },
-  THB: { name: 'Thai baht', symbol: '฿', decimals: 2, liveRate: true },
-  TRY: { name: 'Turkish lira', symbol: '₺', decimals: 2, liveRate: true },
-  ZAR: { name: 'South African rand', symbol: 'R', decimals: 2, liveRate: true },
-  AED: { name: 'UAE dirham', symbol: 'AED ', decimals: 2, liveRate: false },
-  TWD: { name: 'New Taiwan dollar', symbol: 'NT$', decimals: 2, liveRate: false },
-  VND: { name: 'Vietnamese đồng', symbol: '₫', decimals: 0, liveRate: false },
+  GBP: { name: 'British pound', plural: 'British pounds', symbol: '£', decimals: 2, liveRate: true },
+  EUR: { name: 'Euro', plural: 'euros', symbol: '€', decimals: 2, liveRate: true },
+  USD: { name: 'US dollar', plural: 'US dollars', symbol: '$', decimals: 2, liveRate: true },
+  JPY: { name: 'Japanese yen', plural: 'Japanese yen', symbol: '¥', decimals: 0, liveRate: true },
+  AUD: { name: 'Australian dollar', plural: 'Australian dollars', symbol: 'A$', decimals: 2, liveRate: true },
+  BRL: { name: 'Brazilian real', plural: 'Brazilian reais', symbol: 'R$', decimals: 2, liveRate: true },
+  CAD: { name: 'Canadian dollar', plural: 'Canadian dollars', symbol: 'C$', decimals: 2, liveRate: true },
+  CHF: { name: 'Swiss franc', plural: 'Swiss francs', symbol: 'CHF ', decimals: 2, liveRate: true },
+  CNY: { name: 'Chinese yuan', plural: 'Chinese yuan', symbol: 'CN¥', decimals: 2, liveRate: true },
+  CZK: { name: 'Czech koruna', plural: 'Czech korunas', symbol: 'CZK ', decimals: 2, liveRate: true },
+  DKK: { name: 'Danish krone', plural: 'Danish kroner', symbol: 'DKK ', decimals: 2, liveRate: true },
+  HKD: { name: 'Hong Kong dollar', plural: 'Hong Kong dollars', symbol: 'HK$', decimals: 2, liveRate: true },
+  HUF: { name: 'Hungarian forint', plural: 'Hungarian forints', symbol: 'HUF ', decimals: 2, liveRate: true },
+  IDR: { name: 'Indonesian rupiah', plural: 'Indonesian rupiah', symbol: 'IDR ', decimals: 2, liveRate: true },
+  ILS: { name: 'Israeli shekel', plural: 'Israeli shekels', symbol: '₪', decimals: 2, liveRate: true },
+  INR: { name: 'Indian rupee', plural: 'Indian rupees', symbol: '₹', decimals: 2, liveRate: true },
+  ISK: { name: 'Icelandic króna', plural: 'Icelandic krónur', symbol: 'ISK ', decimals: 0, liveRate: true },
+  KRW: { name: 'South Korean won', plural: 'South Korean won', symbol: '₩', decimals: 0, liveRate: true },
+  MXN: { name: 'Mexican peso', plural: 'Mexican pesos', symbol: 'MX$', decimals: 2, liveRate: true },
+  MYR: { name: 'Malaysian ringgit', plural: 'Malaysian ringgit', symbol: 'RM', decimals: 2, liveRate: true },
+  NOK: { name: 'Norwegian krone', plural: 'Norwegian kroner', symbol: 'NOK ', decimals: 2, liveRate: true },
+  NZD: { name: 'New Zealand dollar', plural: 'New Zealand dollars', symbol: 'NZ$', decimals: 2, liveRate: true },
+  PHP: { name: 'Philippine peso', plural: 'Philippine pesos', symbol: '₱', decimals: 2, liveRate: true },
+  PLN: { name: 'Polish złoty', plural: 'Polish złoty', symbol: 'PLN ', decimals: 2, liveRate: true },
+  RON: { name: 'Romanian leu', plural: 'Romanian lei', symbol: 'RON ', decimals: 2, liveRate: true },
+  SEK: { name: 'Swedish krona', plural: 'Swedish kronor', symbol: 'SEK ', decimals: 2, liveRate: true },
+  SGD: { name: 'Singapore dollar', plural: 'Singapore dollars', symbol: 'S$', decimals: 2, liveRate: true },
+  THB: { name: 'Thai baht', plural: 'Thai baht', symbol: '฿', decimals: 2, liveRate: true },
+  TRY: { name: 'Turkish lira', plural: 'Turkish lira', symbol: '₺', decimals: 2, liveRate: true },
+  ZAR: { name: 'South African rand', plural: 'South African rand', symbol: 'R', decimals: 2, liveRate: true },
+  AED: { name: 'UAE dirham', plural: 'UAE dirhams', symbol: 'AED ', decimals: 2, liveRate: false },
+  TWD: { name: 'New Taiwan dollar', plural: 'New Taiwan dollars', symbol: 'NT$', decimals: 2, liveRate: false },
+  VND: { name: 'Vietnamese đồng', plural: 'Vietnamese đồng', symbol: '₫', decimals: 0, liveRate: false },
 } as const satisfies Record<string, CurrencyInfo>;
 
 export type CurrencyCode = keyof typeof CURRENCIES;
@@ -64,13 +66,22 @@ export function isCurrencyCode(value: unknown): value is CurrencyCode {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(CURRENCIES, value);
 }
 
+/** Lower case without accents, so "dong" finds the đồng and "zloty" the złoty. */
+const fold = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/ł/g, 'l')
+    .toLowerCase();
+
 /** Currencies whose code or name contains what someone typed, or whose symbol it is. */
 export function searchCurrencies(query: string): CurrencyCode[] {
-  const wanted = query.trim().toLowerCase();
+  const wanted = fold(query.trim());
   if (wanted === '') return CURRENCY_CODES;
   return CURRENCY_CODES.filter((code) => {
     const { name, symbol } = CURRENCIES[code];
-    return code.toLowerCase().includes(wanted) || name.toLowerCase().includes(wanted) || symbol.trim().toLowerCase() === wanted;
+    return code.toLowerCase().includes(wanted) || fold(name).includes(wanted) || fold(symbol.trim()) === wanted;
   });
 }
 

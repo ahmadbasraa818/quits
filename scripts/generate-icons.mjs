@@ -10,6 +10,7 @@ const ICONS = [
   'info', 'pencil-simple', 'share-network', 'arrow-counter-clockwise', 'github-logo', 'users-three',
   'receipt', 'scales', 'arrows-left-right', 'hand-coins', 'user-plus', 'warning-circle', 'sparkle', 'calendar-blank',
   'gear-six', 'magnifying-glass', 'caret-left', 'note-pencil', 'user-minus', 'door-open', 'globe-hemisphere-west',
+  'arrows-down-up', 'arrows-clockwise',
   // Expense categories
   'fork-knife', 'coffee', 'train', 'airplane-tilt', 'car', 'bed', 'house', 'lightning', 'shopping-bag',
   'ticket', 'gift', 'dots-three',

@@ -1,4 +1,5 @@
 import type { CategoryId } from './categories';
+import type { Rate } from './fx';
 import type { CurrencyCode } from './money';
 import type { Split } from './split';
 
@@ -14,11 +15,25 @@ export type Member = {
   left?: boolean;
 };
 
+/** What was actually paid, when it wasn't in the group's currency. */
+export type Original = {
+  /** Minor units of `currency`. */
+  amount: number;
+  currency: CurrencyCode;
+  /** The rate it was converted at, fixed when the expense was saved. */
+  rate: Rate;
+};
+
 export type Expense = {
   id: string;
   description: string;
-  /** Minor units. */
+  /** Minor units, in the group's currency: what the balances add up. */
   amount: number;
+  /**
+   * Set when it was paid in another currency. The split is then over the
+   * original amount, and `amount` is that converted at the rate.
+   */
+  original?: Original;
   paidBy: string;
   split: Split;
   category: CategoryId;

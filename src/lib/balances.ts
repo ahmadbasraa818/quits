@@ -1,4 +1,4 @@
-import { sharesOf } from './split';
+import { expenseShares } from './split';
 import type { Expense, Payment } from './types';
 
 export type Transfer = { from: string; to: string; amount: number };
@@ -15,7 +15,7 @@ export function balancesOf(memberIds: string[], expenses: Expense[], payments: P
   };
   for (const expense of expenses) {
     add(expense.paidBy, expense.amount);
-    for (const [id, share] of Object.entries(sharesOf(expense.amount, expense.split))) add(id, -share);
+    for (const [id, share] of Object.entries(expenseShares(expense))) add(id, -share);
   }
   for (const payment of payments) {
     add(payment.from, payment.amount);
@@ -38,7 +38,7 @@ export function directDebts(expenses: Expense[], payments: Payment[]): Transfer[
     owed.set(key(to, from), (owed.get(key(to, from)) ?? 0) - amount);
   };
   for (const expense of expenses) {
-    for (const [id, share] of Object.entries(sharesOf(expense.amount, expense.split))) add(id, expense.paidBy, share);
+    for (const [id, share] of Object.entries(expenseShares(expense))) add(id, expense.paidBy, share);
   }
   for (const payment of payments) add(payment.from, payment.to, -payment.amount);
   const transfers: Transfer[] = [];

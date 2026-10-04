@@ -6,6 +6,8 @@ import { Avatar } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
 import { DateField } from '@/components/calendar';
 import { Chip } from '@/components/chip';
+import { Conversion, PinnedRate } from '@/components/conversion';
+import { CurrencyPicker } from '@/components/currency-picker';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
@@ -15,11 +17,14 @@ import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
 import { CATEGORIES, CategoryId } from '@/lib/categories';
 import { daysAgo } from '@/lib/dates';
+import { likelyCurrency, peopleFor } from '@/lib/expenses';
+import { convert } from '@/lib/fx';
 import { nameOf as memberName } from '@/lib/members';
-import { CURRENCIES, formatMoney, parseAmount, toInputString } from '@/lib/money';
-import { participantsOf, sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
+import { CURRENCIES, CurrencyCode, formatMoney, MAX_AMOUNT, parseAmount, toInputString } from '@/lib/money';
+import { sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
 import type { Expense, Group, Member } from '@/lib/types';
 import { useGroup, useGroups } from '@/store/groups';
+import { useEcbRate } from '@/store/rates';
 import { font, radius, space, useTheme } from '@/theme';
 
 const SPLITS = [
@@ -28,20 +33,17 @@ const SPLITS = [
   { value: 'exact', label: 'Exact' },
 ] as const;
 
-/** Who the expense can involve: everyone who hasn't left, and anyone already on it. */
-function peopleFor(group: Group, expense: Expense | undefined): Member[] {
-  const involved = new Set(expense ? [expense.paidBy, ...participantsOf(expense.split)] : []);
-  return group.members.filter((member) => !member.left || involved.has(member.id));
-}
-
 /** The form’s starting state: a blank expense, or the one being edited. */
 function initialState(group: Group, expense: Expense | undefined, people: Member[]) {
   const everyone = people.map((member) => member.id);
   const split = expense?.split;
+  const currency = expense ? (expense.original?.currency ?? group.currency) : likelyCurrency(group);
   return {
+    currency,
+    pinned: expense?.original ? ({ rate: expense.original.rate, source: 'saved' } satisfies PinnedRate) : null,
     date: expense?.date ?? daysAgo(0),
     note: expense?.note ?? '',
-    amountText: expense ? toInputString(expense.amount, group.currency) : '',
+    amountText: expense ? toInputString(expense.original?.amount ?? expense.amount, currency) : '',
     description: expense?.description ?? '',
     category: (expense?.category ?? 'food') as CategoryId,
     paidBy: expense?.paidBy ?? group.me,
@@ -50,7 +52,7 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
     shares: split?.kind === 'shares' ? split.shares : Object.fromEntries(everyone.map((id) => [id, 1])),
     exactTexts:
       split?.kind === 'exact'
-        ? Object.fromEntries(everyone.map((id) => [id, split.amounts[id] ? toInputString(split.amounts[id], group.currency) : '']))
+        ? Object.fromEntries(everyone.map((id) => [id, split.amounts[id] ? toInputString(split.amounts[id], currency) : '']))
         : Object.fromEntries(everyone.map((id) => [id, ''])),
   };
 }
@@ -74,9 +76,16 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
   const [exactTexts, setExactTexts] = useState<Record<string, string>>(start.exactTexts);
   const [date, setDate] = useState(start.date);
   const [note, setNote] = useState(start.note);
+  const [currency, setCurrency] = useState<CurrencyCode>(start.currency);
+  const [pinned, setPinned] = useState<PinnedRate | null>(start.pinned);
+  const [picking, setPicking] = useState(false);
 
-  const { currency } = group;
+  // Paid in another currency: the ECB's rate for the day, unless one is pinned.
+  const foreign = currency !== group.currency;
+  const ecb = useEcbRate(currency, group.currency, date, foreign && !pinned);
+  const rate = foreign ? (pinned?.rate ?? (ecb.status === 'ready' ? ecb.quote.rate : null)) : null;
   const amount = parseAmount(amountText, currency) ?? 0;
+  const converted = !foreign ? amount : rate ? convert(amount, currency, group.currency, rate) : null;
   const amountInvalid = amountText.trim() !== '' && parseAmount(amountText, currency) === null;
   const split: Split =
     kind === 'equal'
@@ -84,18 +93,31 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
       : kind === 'shares'
         ? { kind, shares }
         : { kind, amounts: Object.fromEntries(Object.entries(exactTexts).map(([id, text]) => [id, parseAmount(text, currency) ?? 0])) };
+  const conversionProblem =
+    !foreign || amount === 0
+      ? null
+      : converted === null
+        ? ecb.status === 'loading'
+          ? 'Looking up the exchange rate…'
+          : 'Enter the exchange rate.'
+        : converted === 0
+          ? `That’s less than the smallest amount in ${group.currency}.`
+          : converted > MAX_AMOUNT
+            ? `That’s more than Quits can hold in ${group.currency}.`
+            : null;
   const problem = amountInvalid
     ? 'That isn’t a valid amount.'
     : description.trim() === ''
       ? 'Say what it was for.'
-      : splitProblem(amount, split, currency);
+      : (splitProblem(amount, split, currency) ?? conversionProblem);
   const preview = amount > 0 && (kind !== 'exact' || problem === null) ? sharesOf(amount, split) : {};
   const nameOf = (id: string) => memberName(group, id);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace({ pathname: '/group/[id]', params: { id: group.id } }));
   const save = () => {
     if (problem) return;
-    const data = { description: description.trim(), amount, paidBy, split, category, date, note: note.trim() || undefined };
+    const original = foreign && rate ? { amount, currency, rate } : undefined;
+    const data = { description: description.trim(), amount: converted ?? 0, original, paidBy, split, category, date, note: note.trim() || undefined };
     if (expense) updateExpense(group.id, expense.id, data);
     else addExpense(group.id, data);
     showToast(expense ? 'Expense updated' : `Added ${data.description}`);
@@ -108,10 +130,21 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Scroll>
           <View style={styles.amountRow}>
-            <Text style={[styles.currency, { color: theme.inkMuted }]}>{CURRENCIES[currency].symbol}</Text>
+            <Pressable
+              testID="expense-currency"
+              accessibilityRole="button"
+              accessibilityLabel={`Paid in ${CURRENCIES[currency].plural}`}
+              accessibilityHint="Changes the currency it was paid in"
+              onPress={() => setPicking(true)}
+              hitSlop={8}
+              style={styles.currencyButton}
+            >
+              <Text style={[styles.currency, { color: theme.inkMuted }]}>{CURRENCIES[currency].symbol.trim()}</Text>
+              <Icon name="caretDown" size={16} color={theme.inkMuted} />
+            </Pressable>
             <Field
               testID="amount"
-              accessibilityLabel={`Amount in ${CURRENCIES[currency].name}s`}
+              accessibilityLabel={`Amount in ${CURRENCIES[currency].plural}`}
               value={amountText}
               onChangeText={setAmountText}
               placeholder={CURRENCIES[currency].decimals === 0 ? '0' : '0.00'}
@@ -126,6 +159,20 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
               ]}
             />
           </View>
+          {foreign ? (
+            <Conversion
+              key={`${currency}-${pinned ? pinned.source : 'ecb'}`}
+              amount={amount}
+              from={currency}
+              to={group.currency}
+              date={date}
+              rate={rate}
+              converted={converted}
+              pinned={pinned}
+              ecb={ecb}
+              onPin={setPinned}
+            />
+          ) : null}
           <Field testID="description" accessibilityLabel="What it was for" value={description} onChangeText={setDescription} placeholder="What was it for?" maxLength={60} returnKeyType="done" />
           <View style={styles.date}>
             <DateField value={date} onChange={setDate} />
@@ -242,6 +289,16 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
           ) : null}
         </Scroll>
       </KeyboardAvoidingView>
+      <CurrencyPicker
+        visible={picking}
+        value={currency}
+        title="Paid in"
+        onClose={() => setPicking(false)}
+        onChange={(code) => {
+          setCurrency(code);
+          setPinned(null);
+        }}
+      />
     </Screen>
   );
 }
@@ -265,6 +322,7 @@ export default function ExpenseScreen() {
 
 const styles = StyleSheet.create({
   amountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(1), paddingVertical: space(4) },
+  currencyButton: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48 },
   currency: { fontFamily: font.heavy, fontSize: 40, lineHeight: 48 },
   amountInput: {
     fontFamily: font.heavy,

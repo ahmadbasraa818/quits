@@ -1,6 +1,7 @@
 import * as fc from 'fast-check';
 
-import { allocate, participantsOf, sharesOf, splitProblem } from '../split';
+import { convert, Rate } from '../fx';
+import { allocate, expenseShares, participantsOf, sharesOf, splitProblem } from '../split';
 
 describe('allocate', () => {
   it('splits £10 three ways into whole pence that add up', () => {
@@ -29,6 +30,27 @@ describe('allocate', () => {
         }
       )
     );
+  });
+
+  it('stays exact when total × weight passes 2^53', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 10_000_000_000 }),
+        fc.array(fc.integer({ min: 0, max: 10_000_000_000 }), { minLength: 1, maxLength: 8 }).filter((w) => w.some((x) => x > 0)),
+        (total, weights) => {
+          const parts = allocate(total, weights);
+          const sum = BigInt(weights.reduce((a, b) => a + b, 0));
+          expect(parts.reduce((a, b) => a + b, 0)).toBe(total);
+          parts.forEach((part, i) => {
+            const product = BigInt(total) * BigInt(weights[i]);
+            const floor = Number(product / sum);
+            expect(part).toBeGreaterThanOrEqual(floor);
+            expect(part).toBeLessThanOrEqual(floor + (product % sum === 0n ? 0 : 1));
+          });
+        }
+      )
+    );
+    expect(allocate(10_000_000_000, [3_333_333_333, 3_333_333_333, 3_333_333_334])).toEqual([3_333_333_333, 3_333_333_333, 3_333_333_334]);
   });
 
   it('refuses weights that are all zero', () => {
@@ -62,5 +84,47 @@ describe('splitProblem', () => {
     expect(splitProblem(1000, { kind: 'shares', shares: { a: 1.5 } }, 'GBP')).toBe('Shares must be whole numbers.');
     expect(splitProblem(1000, { kind: 'exact', amounts: { a: 600 } }, 'GBP')).toBe('£4.00 still to assign.');
     expect(splitProblem(1000, { kind: 'exact', amounts: { a: 600, b: 500 } }, 'GBP')).toBe('£1.00 over the total.');
+  });
+});
+
+describe('expenseShares', () => {
+  const yen: Rate = { base: 'GBP', value: '208.14' };
+
+  it('uses the split as it is when the expense is in the group’s currency', () => {
+    expect(expenseShares({ amount: 900, split: { kind: 'equal', among: ['a', 'b', 'c'] } })).toEqual({ a: 300, b: 300, c: 300 });
+  });
+
+  it('divides the converted total in the proportions of the original split', () => {
+    // ¥9,000 split ¥6,000 / ¥3,000, paid in yen by a pound group: £43.24 at £1 = ¥208.14.
+    const amount = convert(9000, 'JPY', 'GBP', yen);
+    expect(amount).toBe(4324);
+    const shares = expenseShares({ amount, original: { amount: 9000, currency: 'JPY', rate: yen }, split: { kind: 'exact', amounts: { a: 6000, b: 3000 } } });
+    expect(shares).toEqual({ a: 2883, b: 1441 });
+  });
+
+  it('always adds up to the converted amount, within a unit of each fair share', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 5_000_000 }),
+        fc.integer({ min: 1, max: 900_000 }).map((n) => String(n / 1000)),
+        fc.array(fc.integer({ min: 0, max: 6 }), { minLength: 2, maxLength: 8 }).filter((w) => w.some((x) => x > 0)),
+        (paid, value, weights) => {
+          const rate: Rate = { base: 'JPY', value };
+          const amount = convert(paid, 'JPY', 'EUR', rate);
+          const ids = weights.map((_, i) => `p${i}`);
+          const split = { kind: 'shares' as const, shares: Object.fromEntries(ids.map((id, i) => [id, weights[i]])) };
+          const shares = expenseShares({ amount, original: { amount: paid, currency: 'JPY', rate }, split });
+          expect(Object.values(shares).reduce((a, b) => a + b, 0)).toBe(amount);
+          const inYen = sharesOf(paid, split);
+          for (const id of Object.keys(shares)) {
+            // The fair share, worked out exactly: amount × share ÷ paid lies between floor and ceiling.
+            const product = BigInt(amount) * BigInt(inYen[id]);
+            const floor = Number(product / BigInt(paid));
+            expect(shares[id]).toBeGreaterThanOrEqual(floor);
+            expect(shares[id]).toBeLessThanOrEqual(floor + (product % BigInt(paid) === 0n ? 0 : 1));
+          }
+        }
+      )
+    );
   });
 });
