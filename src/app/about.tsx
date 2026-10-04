@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { appVersion, issueUrl, openLink } from '@/components/crash-screen';
 import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
@@ -182,9 +183,18 @@ export default function AboutScreen() {
         <SectionLabel>Your data</SectionLabel>
         <YourData />
 
+        <SectionLabel>Privacy and help</SectionLabel>
+        <View style={styles.dataActions}>
+          <Button label="How Quits handles your data" icon="shieldCheck" variant="secondary" testID="open-privacy" onPress={() => router.push('/privacy')} />
+          <Button label="Report a problem" icon="bug" variant="ghost" testID="report-problem" onPress={() => openLink(issueUrl())} />
+        </View>
+
         <SectionLabel>Made with</SectionLabel>
         <Text variant="body" tone="muted">
           React Native, Expo Router, TypeScript, Reanimated, Zustand and react-native-svg. The same code runs on iOS, Android and the web.
+        </Text>
+        <Text variant="caption" tone="muted" style={{ marginTop: space(2) }} testID="app-version">
+          Quits {appVersion()}
         </Text>
 
         <View style={styles.actions}>
@@ -197,7 +207,9 @@ export default function AboutScreen() {
             onPress={() => {
               resetDemo();
               showToast('Demo data restored');
-              router.replace('/');
+              // Back to the groups already underneath, rather than stacking a second copy of them.
+              if (router.canDismiss()) router.dismissAll();
+              else router.replace('/');
             }}
           />
         </View>
