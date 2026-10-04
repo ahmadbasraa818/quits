@@ -1,84 +1,64 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AvatarStack } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
-import { Icon } from '@/components/icon';
+import { GroupCard, openGroup, Overview, useSplitView } from '@/components/group-list';
+import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
-import { Money } from '@/components/money';
-import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import { CurrencyCode, formatMoney } from '@/lib/money';
-import type { Group } from '@/lib/types';
 import { useGroups } from '@/store/groups';
-import { summarise } from '@/store/summary';
 import { radius, space, useTheme } from '@/theme';
 
-function GroupCard({ group, index }: { group: Group; index: number }) {
-  const theme = useTheme();
-  const { total, mine } = summarise(group);
-  const status = mine > 0 ? `You’re owed ${formatMoney(mine, group.currency)}` : mine < 0 ? `You owe ${formatMoney(-mine, group.currency)}` : 'Settled up';
-  return (
-    <Animated.View entering={FadeInDown.delay(60 * index).duration(320)}>
-      <PressableScale
-        testID={`group-${group.id}`}
-        accessibilityRole="button"
-        accessibilityLabel={`${group.name}. ${group.members.length} people. ${status}.`}
-        onPress={() => router.push({ pathname: '/group/[id]', params: { id: group.id } })}
-      >
-        <Card style={styles.groupCard}>
-          <View style={styles.groupTop}>
-            <AvatarStack members={group.members} />
-            <Icon name="caretRight" size={18} color={theme.inkMuted} />
-          </View>
-          <Text variant="heading">{group.name}</Text>
-          <Text variant="caption" tone="muted" style={{ fontVariant: ['tabular-nums'] }}>
-            {group.members.length} people · {formatMoney(total, group.currency)} spent
-          </Text>
-          <View style={styles.status}>
-            {mine === 0 ? <Icon name="checkCircle" size={18} color={theme.inkMuted} /> : null}
-            <Text variant="label" tone={mine > 0 ? 'positive' : mine < 0 ? 'negative' : 'muted'} style={{ fontVariant: ['tabular-nums'] }}>
-              {status}
-            </Text>
-          </View>
-        </Card>
-      </PressableScale>
-    </Animated.View>
-  );
-}
+const FEATURES: { icon: IconName; title: string; body: string }[] = [
+  { icon: 'arrowsLeftRight', title: 'The fewest payments', body: 'The Japan trip settles in 4 payments instead of the 10 it would take pair by pair, and you can watch it happen.' },
+  { icon: 'globeHemisphereWest', title: 'Any currency, to the penny', body: 'Pay in yen, settle in pounds, at the European Central Bank’s rate for the day. The sums are exact.' },
+  { icon: 'magicWand', title: 'Write it as you’d say it', body: '“Ramen ¥4,800, Aiko paid, split with Ben and me” fills in the whole expense.' },
+];
 
-/** What you are owed or owe across every group, one line per currency. */
-function Overview({ groups }: { groups: Group[] }) {
+/** Beside the sidebar on a wide screen, where the list would be: what Quits does, and where to start. */
+function Welcome() {
   const theme = useTheme();
-  const byCurrency = new Map<CurrencyCode, number>();
-  for (const group of groups) byCurrency.set(group.currency, (byCurrency.get(group.currency) ?? 0) + summarise(group).mine);
-  const lines = [...byCurrency].filter(([, amount]) => amount !== 0);
+  const hasDemo = useGroups((state) => state.groups.some((group) => group.id === 'demo_japan'));
   return (
-    <View style={[styles.overview, { backgroundColor: theme.brand }]}>
-      <Text variant="label" tone="onBrand">
-        Across your groups
-      </Text>
-      {lines.length === 0 ? (
-        <Text variant="title" tone="onBrand">
-          You’re all square
+    <Screen>
+      <Scroll contentContainerStyle={styles.welcome}>
+        <Text variant="display" accessibilityRole="header">
+          Quits
         </Text>
-      ) : (
-        lines.map(([currency, amount]) => (
-          <View key={currency} style={styles.overviewLine}>
-            <Text variant="body" tone="onBrand">
-              {amount > 0 ? "You’re owed" : 'You owe'}
-            </Text>
-            <Money amount={Math.abs(amount)} currency={currency} variant="title" tone="onBrand" />
-          </View>
-        ))
-      )}
-    </View>
+        <Text variant="body" tone="muted" style={styles.tagline}>
+          Split costs with friends. Settle up in the fewest payments.
+        </Text>
+        <View style={{ gap: space(3) }}>
+          {FEATURES.map((feature) => (
+            <Card key={feature.title} style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: theme.sunken }]}>
+                <Icon name={feature.icon} size={22} color={theme.ink} />
+              </View>
+              <View style={{ flex: 1, gap: space(1) }}>
+                <Text variant="bodyStrong">{feature.title}</Text>
+                <Text variant="body" tone="muted">
+                  {feature.body}
+                </Text>
+              </View>
+            </Card>
+          ))}
+        </View>
+        <Text variant="body" tone="muted" style={styles.start}>
+          Open a group from the list, or start one of your own.
+        </Text>
+        <View style={styles.actions}>
+          {hasDemo ? <Button label="Open the Japan trip" icon="arrowRight" onPress={() => openGroup('demo_japan', true)} testID="open-demo" /> : null}
+          <Button label="New group" icon="plus" variant="secondary" onPress={() => router.push('/new-group')} testID="new-group" />
+        </View>
+      </Scroll>
+    </Screen>
   );
 }
 
 export default function GroupsScreen() {
   const groups = useGroups((state) => state.groups);
+  const split = useSplitView();
+  if (split) return <Welcome />;
   return (
     <Screen footer={<Button label="New group" icon="plus" onPress={() => router.push('/new-group')} testID="new-group" />}>
       <TopBar trailing={<IconButton icon="info" label="About Quits" onPress={() => router.push('/about')} />} />
@@ -107,10 +87,10 @@ export default function GroupsScreen() {
 
 const styles = StyleSheet.create({
   tagline: { marginTop: space(1), marginBottom: space(5) },
-  overview: { borderRadius: radius.lg, padding: space(5), gap: space(2) },
-  overviewLine: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space(3) },
   list: { gap: space(3) },
-  groupCard: { gap: space(1.5) },
-  groupTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space(2) },
-  status: { flexDirection: 'row', alignItems: 'center', gap: space(1.5), marginTop: space(2) },
+  welcome: { flexGrow: 1, justifyContent: 'center', paddingVertical: space(10) },
+  feature: { flexDirection: 'row', gap: space(4), alignItems: 'flex-start' },
+  featureIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  start: { marginTop: space(8) },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3), marginTop: space(4) },
 });

@@ -6,6 +6,7 @@ import { AvatarStack } from '@/components/avatar';
 import { BalanceBars } from '@/components/balance-bars';
 import { Button, IconButton } from '@/components/button';
 import { ExpenseList } from '@/components/expense-list';
+import { useSplitView } from '@/components/group-list';
 import { Screen, Scroll, TopBar } from '@/components/layout';
 import { Money } from '@/components/money';
 import { QuickAdd } from '@/components/quick-add';
@@ -33,6 +34,7 @@ export default function GroupScreen() {
   const summary = useSummary(group);
   const [tab, setTab] = useState<Tab>('expenses');
   const [quick, setQuick] = useState(false);
+  const split = useSplitView();
   // Two labelled buttons need about 400 points; below that, quick add is its wand alone.
   const roomy = useWindowDimensions().width >= 400;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -68,7 +70,8 @@ export default function GroupScreen() {
       }
     >
       <TopBar
-        leading={{ icon: 'arrowLeft', label: 'Back to groups', onPress: goBack }}
+        // Beside the sidebar the groups are always in view, so there's nothing to go back to.
+        leading={split ? undefined : { icon: 'arrowLeft', label: 'Back to groups', onPress: goBack }}
         title={group.name}
         trailing={
           <IconButton icon="gearSix" label="Group settings" testID="group-settings" onPress={() => router.push({ pathname: '/group/[id]/settings', params: { id: group.id } })} />

@@ -1,9 +1,27 @@
+// Finishes the web build for GitHub Pages.
+import { createHash } from 'node:crypto';
+import { copyFileSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+
 // GitHub Pages serves 404.html for any path it doesn't know. Making it a copy
 // of index.html lets a deep link such as /quits/group/demo_japan load the app,
 // which then routes to the right screen.
-import { copyFileSync, writeFileSync } from 'node:fs';
-
 copyFileSync('dist/index.html', 'dist/404.html');
 // Expo names some files with a leading underscore, which Jekyll would hide.
 writeFileSync('dist/.nojekyll', '');
-console.log('Added dist/404.html and dist/.nojekyll');
+
+// The service worker keeps every file the app needs, under a version made from
+// their contents, so any change to the build is a new version.
+const walk = (folder) => readdirSync(folder).flatMap((name) => (statSync(join(folder, name)).isDirectory() ? walk(join(folder, name)) : [join(folder, name)]));
+const files = walk('dist')
+  .map((file) => relative('dist', file).split('\\').join('/'))
+  .filter((file) => !['404.html', '.nojekyll', 'sw.js', 'metadata.json'].includes(file))
+  .sort();
+const hash = createHash('sha256');
+for (const file of files) hash.update(file).update(readFileSync(join('dist', file)));
+const version = hash.digest('hex').slice(0, 12);
+const urls = files.map((file) => `/quits/${file === 'index.html' ? '' : file}`);
+const worker = readFileSync('scripts/sw.template.js', 'utf8').replace('__VERSION__', version).replace('__FILES__', JSON.stringify(urls, null, 2));
+writeFileSync('dist/sw.js', worker);
+
+console.log(`Added dist/404.html, dist/.nojekyll and dist/sw.js (version ${version}, ${urls.length} files)`);

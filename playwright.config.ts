@@ -14,6 +14,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173/quits/',
     trace: 'retain-on-failure',
+    // The service worker would serve tests from its copy and hide requests from page.route;
+    // the offline test turns it back on.
+    serviceWorkers: 'block',
   },
   projects: [
     { name: 'phone', use: { ...devices['Pixel 7'] } },

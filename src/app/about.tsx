@@ -7,6 +7,7 @@ import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
+import { isAppleMobile, useInstall } from '@/lib/install';
 import { useGroups } from '@/store/groups';
 import { space, useTheme } from '@/theme';
 
@@ -29,11 +30,49 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
     body: 'Pay in one currency and settle in another. Quits converts at the European Central Bank’s rate for the day, looked up through frankfurter.dev, which is the only time it goes online. You can type your own rate instead. The rate is fixed when you save, and the sums are exact.',
   },
   {
+    icon: 'lockSimple',
+    title: 'Yours, on this device',
+    body: 'Your groups stay on this device. Nothing is sent anywhere, except a currency pair and a date when Quits looks up a rate.',
+  },
+  {
     icon: 'checkCircle',
     title: 'Tested on thousands of groups',
     body: 'Property tests generate random groups and check every settlement against an independent search for the true minimum.',
   },
 ];
+
+/** On the web: install Quits to open like an app, offline too, where the browser can. */
+function InstallCard() {
+  const theme = useTheme();
+  const { offer, installed } = useInstall();
+  const apple = isAppleMobile();
+  if (Platform.OS !== 'web' || installed || (!offer && !apple)) return null;
+  return (
+    <Card style={styles.point} testID="install-card">
+      <Icon name="downloadSimple" size={24} color={theme.ink} />
+      <View style={{ flex: 1, gap: space(2) }}>
+        <Text variant="bodyStrong">Install Quits</Text>
+        <Text variant="body" tone="muted">
+          It opens like an app, and works without a connection.
+          {apple && !offer ? ' In Safari, tap Share, then Add to Home Screen.' : ''}
+        </Text>
+        {offer ? (
+          <View style={{ alignSelf: 'flex-start' }}>
+            <Button
+              compact
+              label="Install"
+              icon="downloadSimple"
+              onPress={async () => {
+                await offer.prompt();
+                useInstall.setState({ offer: null });
+              }}
+            />
+          </View>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
 
 export default function AboutScreen() {
   const theme = useTheme();
@@ -69,6 +108,10 @@ export default function AboutScreen() {
               </View>
             </Card>
           ))}
+        </View>
+
+        <View style={{ marginTop: space(3) }}>
+          <InstallCard />
         </View>
 
         <SectionLabel>Made with</SectionLabel>
