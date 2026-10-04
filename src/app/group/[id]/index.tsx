@@ -12,6 +12,7 @@ import { Money } from '@/components/money';
 import { QuickAdd } from '@/components/quick-add';
 import { Segmented } from '@/components/segmented';
 import { SettleUp } from '@/components/settle-up';
+import { ShareCopy } from '@/components/share-copy';
 import { Text } from '@/components/text';
 import { useLastDefined } from '@/hooks/use-last-defined';
 import { formatMoney } from '@/lib/money';
@@ -34,6 +35,7 @@ export default function GroupScreen() {
   const summary = useSummary(group);
   const [tab, setTab] = useState<Tab>('expenses');
   const [quick, setQuick] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const split = useSplitView();
   // Two labelled buttons need about 400 points; below that, quick add is its wand alone.
   const roomy = useWindowDimensions().width >= 400;
@@ -74,7 +76,10 @@ export default function GroupScreen() {
         leading={split ? undefined : { icon: 'arrowLeft', label: 'Back to groups', onPress: goBack }}
         title={group.name}
         trailing={
-          <IconButton icon="gearSix" label="Group settings" testID="group-settings" onPress={() => router.push({ pathname: '/group/[id]/settings', params: { id: group.id } })} />
+          <>
+            <IconButton icon="shareNetwork" label="Share a copy" testID="share-group" onPress={() => setSharing(true)} />
+            <IconButton icon="gearSix" label="Group settings" testID="group-settings" onPress={() => router.push({ pathname: '/group/[id]/settings', params: { id: group.id } })} />
+          </>
         }
       />
       <Scroll>
@@ -98,6 +103,7 @@ export default function GroupScreen() {
         </View>
       </Scroll>
       <QuickAdd group={group} visible={quick} onClose={() => setQuick(false)} />
+      {sharing ? <ShareCopy group={group} visible onClose={() => setSharing(false)} /> : null}
     </Screen>
   );
 }

@@ -66,4 +66,10 @@ export type Group = {
   payments: Payment[];
   createdAt: number;
   updatedAt?: number;
+  /**
+   * What shared copies of the group know each other by: given to a group the
+   * first time it's shared, and carried by every copy made from a link. (Ids
+   * alone won't do: every visitor's demo trip has the same one.)
+   */
+  origin?: string;
 };

@@ -11,7 +11,9 @@ export const groupArbitrary = fc.integer({ min: 2, max: 9 }).chain((size) => {
   const foreign = fc.option(
     fc.record({
       currency: fc.constantFrom('USD', 'EUR', 'JPY', 'KRW' as const),
-      value: fc.integer({ min: 1, max: 2_000_000 }).map((n) => parseRateValue(String(n / 1000))!),
+      // From 1 to 200, read either way round: rates are kept the way round that reads above one, and
+      // converted amounts then stay within what the app holds, as the form makes sure.
+      value: fc.integer({ min: 1000, max: 200_000 }).map((n) => parseRateValue(String(n / 1000))!),
       base: fc.boolean(),
     }),
     { nil: undefined }

@@ -36,7 +36,18 @@ type GroupsState = {
   removePayment: (groupId: string, paymentId: string) => Payment | undefined;
   restorePayment: (groupId: string, payment: Payment) => void;
   resetDemo: () => void;
+  /** A copy of a group from a shared link, with `me` as the person using this device. Returns its id. */
+  importGroup: (shared: Group, me: string) => string;
+  /** Brings a copy up to date with a newer link, keeping its id and who you are in it. */
+  replaceGroup: (groupId: string, shared: Group) => void;
+  /** Readies a group to share: your name as others will see it, and an origin its copies will know it by. Returns the group as shared. */
+  prepareShare: (groupId: string, name: string) => Group | undefined;
+  /** Everything replaced, from a backup. */
+  replaceAll: (groups: Group[]) => void;
 };
+
+/** What copies of a group know each other by. */
+export const originOf = (group: Pick<Group, 'id' | 'origin'>) => group.origin ?? group.id;
 
 const updateGroup = (groups: Group[], groupId: string, change: (group: Group) => Group) =>
   groups.map((group) => (group.id === groupId ? change(group) : group));
@@ -186,6 +197,38 @@ export const useGroups = create<GroupsState>()(
         }),
 
       resetDemo: () => set({ groups: demoGroups() }),
+
+      importGroup: (shared, me) => {
+        const id = createId('g');
+        const copy: Group = { ...shared, id, me, origin: originOf(shared), updatedAt: Date.now() };
+        set({ groups: [copy, ...get().groups] });
+        return id;
+      },
+
+      replaceGroup: (groupId, shared) =>
+        set({
+          groups: updateGroup(get().groups, groupId, (local) => ({
+            ...shared,
+            id: local.id,
+            // Who you are stays as it was, as long as you're still in the group.
+            me: shared.members.some((member) => member.id === local.me) ? local.me : shared.me,
+            origin: local.origin,
+            updatedAt: Date.now(),
+          })),
+        }),
+
+      prepareShare: (groupId, name) => {
+        set({
+          groups: updateGroup(get().groups, groupId, (group) => ({
+            ...group,
+            origin: group.origin ?? createId('o'),
+            members: group.members.map((member) => (member.id === group.me ? { ...member, name: name.trim() } : member)),
+          })),
+        });
+        return get().groups.find((group) => group.id === groupId);
+      },
+
+      replaceAll: (groups) => set({ groups }),
     }),
     {
       name: 'quits',
