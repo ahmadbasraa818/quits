@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
@@ -10,18 +10,21 @@ import { Conversion, PinnedRate } from '@/components/conversion';
 import { CurrencyPicker } from '@/components/currency-picker';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
+import { ItemDraft, ItemsEditor } from '@/components/items-editor';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
+import { isSum, readAmount } from '@/lib/calc';
 import { CATEGORIES, CategoryId } from '@/lib/categories';
 import { daysAgo } from '@/lib/dates';
 import { likelyCurrency, peopleFor } from '@/lib/expenses';
 import { convert } from '@/lib/fx';
 import { nameOf as memberName } from '@/lib/members';
-import { CURRENCIES, CurrencyCode, formatMoney, MAX_AMOUNT, parseAmount, toInputString } from '@/lib/money';
-import { sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
+import { createId } from '@/lib/ids';
+import { CURRENCIES, CurrencyCode, formatMoney, MAX_AMOUNT, toInputString } from '@/lib/money';
+import { itemsTotal, sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
 import type { QuickDraft } from '@/lib/quick-add';
 import type { Expense, Group, Member } from '@/lib/types';
 import { useDraft } from '@/store/draft';
@@ -31,8 +34,17 @@ import { font, radius, space, useTheme } from '@/theme';
 
 const SPLITS = [
   { value: 'equal', label: 'Equally' },
-  { value: 'shares', label: 'By shares' },
+  { value: 'shares', label: 'Shares' },
   { value: 'exact', label: 'Exact' },
+  { value: 'items', label: 'Items' },
+] as const;
+
+/** Buttons for sums in the amount, since a phone's number pad has none. */
+const OPERATORS = [
+  { shown: '+', typed: '+', name: 'plus' },
+  { shown: '−', typed: '-', name: 'minus' },
+  { shown: '×', typed: '×', name: 'times' },
+  { shown: '÷', typed: '÷', name: 'divided by' },
 ] as const;
 
 /** The form’s starting state: the one being edited, a quick-add draft carried over, or a blank expense. */
@@ -52,6 +64,8 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
       among: draft.among,
       shares: Object.fromEntries(everyone.map((id) => [id, 1])),
       exactTexts: Object.fromEntries(everyone.map((id) => [id, ''])),
+      items: [] as ItemDraft[],
+      extrasText: '',
     };
   }
   const split = expense?.split;
@@ -72,6 +86,11 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
       split?.kind === 'exact'
         ? Object.fromEntries(everyone.map((id) => [id, split.amounts[id] ? toInputString(split.amounts[id], currency) : '']))
         : Object.fromEntries(everyone.map((id) => [id, ''])),
+    items:
+      split?.kind === 'items'
+        ? split.items.map((item): ItemDraft => ({ key: item.id, label: item.label, amountText: toInputString(item.amount, currency), among: item.among }))
+        : ([] as ItemDraft[]),
+    extrasText: split?.kind === 'items' && split.extras > 0 ? toInputString(split.extras, currency) : '',
   };
 }
 
@@ -97,20 +116,40 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
   const [currency, setCurrency] = useState<CurrencyCode>(start.currency);
   const [pinned, setPinned] = useState<PinnedRate | null>(start.pinned);
   const [picking, setPicking] = useState(false);
+  const [items, setItems] = useState<ItemDraft[]>(start.items);
+  const [extrasText, setExtrasText] = useState(start.extrasText);
+  const amountField = useRef<TextInput>(null);
 
   // Paid in another currency: the ECB's rate for the day, unless one is pinned.
   const foreign = currency !== group.currency;
   const ecb = useEcbRate(currency, group.currency, date, foreign && !pinned);
   const rate = foreign ? (pinned?.rate ?? (ecb.status === 'ready' ? ecb.quote.rate : null)) : null;
-  const amount = parseAmount(amountText, currency) ?? 0;
+  // Itemised, the amount is what the items and extras come to; otherwise it's what was typed, sums and all.
+  const itemised: Extract<Split, { kind: 'items' }> | null =
+    kind === 'items'
+      ? {
+          kind,
+          items: items.map((item) => ({
+            id: item.key,
+            label: item.label.trim(),
+            amount: readAmount(item.amountText, currency) ?? 0,
+            among: people.map((member) => member.id).filter((id) => item.among.includes(id)),
+          })),
+          extras: readAmount(extrasText, currency) ?? 0,
+        }
+      : null;
+  const typed = readAmount(amountText, currency);
+  const amount = itemised ? itemsTotal(itemised) : (typed ?? 0);
   const converted = !foreign ? amount : rate ? convert(amount, currency, group.currency, rate) : null;
-  const amountInvalid = amountText.trim() !== '' && parseAmount(amountText, currency) === null;
+  const amountInvalid = !itemised && amountText.trim() !== '' && typed === null;
+  const badPrice = itemised ? [...items.map((item) => item.amountText), extrasText].some((text) => text.trim() !== '' && readAmount(text, currency) === null) : false;
   const split: Split =
-    kind === 'equal'
+    itemised ??
+    (kind === 'equal'
       ? { kind, among: people.map((member) => member.id).filter((id) => among.includes(id)) }
       : kind === 'shares'
         ? { kind, shares }
-        : { kind, amounts: Object.fromEntries(Object.entries(exactTexts).map(([id, text]) => [id, parseAmount(text, currency) ?? 0])) };
+        : { kind: 'exact', amounts: Object.fromEntries(Object.entries(exactTexts).map(([id, text]) => [id, readAmount(text, currency) ?? 0])) });
   const conversionProblem =
     !foreign || amount === 0
       ? null
@@ -125,10 +164,17 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
             : null;
   const problem = amountInvalid
     ? 'That isn’t a valid amount.'
+    : badPrice
+      ? 'One of the prices isn’t a valid amount.'
     : description.trim() === ''
       ? 'Say what it was for.'
       : (splitProblem(amount, split, currency) ?? conversionProblem);
   const preview = amount > 0 && (kind !== 'exact' || problem === null) ? sharesOf(amount, split) : {};
+  const chooseKind = (next: SplitKind) => {
+    setKind(next);
+    // Starting an itemised bill from an amount already typed: that's the first item.
+    if (next === 'items' && items.length === 0) setItems([{ key: createId('i'), label: '', amountText: typed ? toInputString(typed, currency) : '', among: [] }]);
+  };
   const nameOf = (id: string) => memberName(group, id);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace({ pathname: '/group/[id]', params: { id: group.id } }));
@@ -161,9 +207,11 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
               <Icon name="caretDown" size={16} color={theme.inkMuted} />
             </Pressable>
             <Field
+              ref={amountField}
               testID="amount"
-              accessibilityLabel={`Amount in ${CURRENCIES[currency].plural}`}
-              value={amountText}
+              accessibilityLabel={itemised ? `Amount in ${CURRENCIES[currency].plural}, the items added up` : `Amount in ${CURRENCIES[currency].plural}`}
+              value={itemised ? (amount > 0 ? toInputString(amount, currency) : '') : amountText}
+              editable={!itemised}
               onChangeText={setAmountText}
               placeholder={CURRENCIES[currency].decimals === 0 ? '0' : '0.00'}
               inputMode="decimal"
@@ -173,10 +221,41 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
               style={[
                 styles.amountInput,
                 // Sized to its digits, so the currency symbol stays beside the number.
-                { color: amountInvalid ? theme.negative : theme.ink, width: Math.max(1, (amountText || '0').length) * 31 + 12 },
+                { color: amountInvalid ? theme.negative : theme.ink, width: Math.max(1, ((itemised ? toInputString(amount, currency) : amountText) || '0').length) * 31 + 12 },
               ]}
             />
           </View>
+          {itemised ? (
+            <Text variant="caption" tone="muted" style={styles.sum}>
+              The items below add up to this.
+            </Text>
+          ) : (
+            <View style={styles.calculator}>
+              <View style={styles.operators}>
+                {OPERATORS.map((operator) => (
+                  <Pressable
+                    key={operator.name}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Type ${operator.name}`}
+                    testID={`operator-${operator.name.replace(/ /g, '-')}`}
+                    onPress={() => {
+                      setAmountText((text) => text + operator.typed);
+                      amountField.current?.focus();
+                    }}
+                    hitSlop={4}
+                    style={[styles.operator, { backgroundColor: theme.sunken }]}
+                  >
+                    <Text variant="bodyStrong">{operator.shown}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              {isSum(amountText) ? (
+                <Text variant="label" tone={typed === null ? 'negative' : 'muted'} style={styles.sum} testID="amount-sum" accessibilityLiveRegion="polite">
+                  {typed === null ? 'That sum doesn’t work out.' : `= ${formatMoney(typed, currency)}`}
+                </Text>
+              ) : null}
+            </View>
+          )}
           {foreign ? (
             <Conversion
               key={`${currency}-${pinned ? pinned.source : 'ecb'}`}
@@ -217,11 +296,30 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
           </View>
 
           <SectionLabel>Split</SectionLabel>
-          <Segmented label="How to split it" options={SPLITS} value={kind} onChange={setKind} />
+          <Segmented label="How to split it" options={SPLITS} value={kind} onChange={chooseKind} />
+          {itemised ? (
+            <ItemsEditor
+              group={group}
+              people={people}
+              currency={currency}
+              items={items}
+              onChange={setItems}
+              extrasText={extrasText}
+              onExtrasChange={setExtrasText}
+              newKey={() => createId('i')}
+            />
+          ) : null}
           <Card style={styles.people}>
             {people.map((member, index) => {
               const share = preview[member.id];
-              const included = kind === 'equal' ? among.includes(member.id) : kind === 'shares' ? (shares[member.id] ?? 0) > 0 : (parseAmount(exactTexts[member.id] ?? '', currency) ?? 0) > 0;
+              const included =
+                kind === 'equal'
+                  ? among.includes(member.id)
+                  : kind === 'shares'
+                    ? (shares[member.id] ?? 0) > 0
+                    : kind === 'items'
+                      ? (preview[member.id] ?? 0) > 0
+                      : (readAmount(exactTexts[member.id] ?? '', currency) ?? 0) > 0;
               return (
                 <View key={member.id} style={[styles.person, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line }]}>
                   <Avatar member={member} size={32} />
@@ -363,6 +461,10 @@ const styles = StyleSheet.create({
   count: { minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] },
   exact: { width: 120, minHeight: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(2), marginTop: space(3) },
+  calculator: { alignItems: 'center', gap: space(2), marginTop: -space(2), marginBottom: space(4) },
+  operators: { flexDirection: 'row', gap: space(2) },
+  operator: { width: 44, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  sum: { textAlign: 'center', fontVariant: ['tabular-nums'] },
   date: { marginTop: space(3) },
   note: { minHeight: 88, textAlignVertical: 'top' },
 });

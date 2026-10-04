@@ -1,7 +1,7 @@
 import * as fc from 'fast-check';
 
 import { convert, Rate } from '../fx';
-import { allocate, expenseShares, participantsOf, sharesOf, splitProblem } from '../split';
+import { allocate, expenseShares, itemSubtotals, itemsTotal, participantsOf, sharesOf, Split, splitProblem } from '../split';
 
 describe('allocate', () => {
   it('splits £10 three ways into whole pence that add up', () => {
@@ -123,6 +123,58 @@ describe('expenseShares', () => {
             expect(shares[id]).toBeGreaterThanOrEqual(floor);
             expect(shares[id]).toBeLessThanOrEqual(floor + (product % BigInt(paid) === 0n ? 0 : 1));
           }
+        }
+      )
+    );
+  });
+});
+
+describe('itemised bills', () => {
+  const bill: Extract<Split, { kind: 'items' }> = {
+    kind: 'items',
+    items: [
+      { id: '1', label: 'Pork okonomiyaki', amount: 1450, among: ['you'] },
+      { id: '2', label: 'Yakisoba to share', amount: 1200, among: ['you', 'aiko', 'ben'] },
+      { id: '3', label: 'Beers', amount: 2400, among: ['aiko', 'ben'] },
+    ],
+    extras: 0,
+  };
+
+  it('splits each item between whoever had it', () => {
+    expect(itemSubtotals(bill.items)).toEqual({ you: 1850, aiko: 1600, ben: 1600 });
+    expect(itemsTotal(bill)).toBe(5050);
+    expect(sharesOf(5050, bill)).toEqual({ you: 1850, aiko: 1600, ben: 1600 });
+    expect(participantsOf(bill).sort()).toEqual(['aiko', 'ben', 'you']);
+  });
+
+  it('shares tax, service and tip in proportion to what everyone had', () => {
+    // £30 of food (£20 and £10), plus £6 service: £24 and £12.
+    const withService: Split = { kind: 'items', items: [{ id: 'a', label: 'Steak', amount: 2000, among: ['a'] }, { id: 'b', label: 'Salad', amount: 1000, among: ['b'] }], extras: 600 };
+    expect(sharesOf(3600, withService)).toEqual({ a: 2400, b: 1200 });
+  });
+
+  it('says what’s missing', () => {
+    expect(splitProblem(0, { kind: 'items', items: [], extras: 0 }, 'GBP')).toBe('Add an item with its price.');
+    expect(splitProblem(500, { kind: 'items', items: [{ id: '1', label: 'Chips', amount: 500, among: [] }], extras: 0 }, 'GBP')).toBe('Say who had “Chips”.');
+    expect(splitProblem(500, { kind: 'items', items: [{ id: '1', label: '', amount: 500, among: [] }], extras: 0 }, 'GBP')).toBe('Say who had each item.');
+    expect(splitProblem(9999, bill, 'JPY')).toBe('The items come to ¥5,050, not ¥9,999.');
+    expect(splitProblem(5050, bill, 'JPY')).toBeNull();
+  });
+
+  it('always adds up, extras and all', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.record({ amount: fc.integer({ min: 0, max: 100_000 }), among: fc.subarray(['a', 'b', 'c', 'd'], { minLength: 1 }) }), { minLength: 1, maxLength: 8 }),
+        fc.integer({ min: 0, max: 50_000 }),
+        (lines, extras) => {
+          const split: Extract<Split, { kind: 'items' }> = { kind: 'items', items: lines.map((line, i) => ({ id: String(i), label: 'x', ...line })), extras };
+          const total = itemsTotal(split);
+          fc.pre(lines.some((line) => line.amount > 0));
+          const shares = sharesOf(total, split);
+          expect(Object.values(shares).reduce((a, b) => a + b, 0)).toBe(total);
+          // Nobody who had nothing pays anything.
+          const subtotals = itemSubtotals(split.items);
+          for (const id of Object.keys(shares)) expect(subtotals[id]).toBeGreaterThan(0);
         }
       )
     );

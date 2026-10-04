@@ -33,16 +33,16 @@ describe('SettleUp', () => {
   it('records part of a payment, and says what’s still owed', async () => {
     const user = userEvent.setup();
     await render(<Settle />);
-    await user.press(screen.getByRole('button', { name: 'Aiko pays You ¥29,359' }));
+    await user.press(screen.getByRole('button', { name: 'Chloe pays You ¥25,829' }));
     const sheet = within(screen.getByTestId('record-payment'));
-    expect(sheet.getByLabelText('Amount in Japanese yen')).toHaveDisplayValue('29359');
+    expect(sheet.getByLabelText('Amount in Japanese yen')).toHaveDisplayValue('25829');
     await user.clear(sheet.getByLabelText('Amount in Japanese yen'));
     await user.type(sheet.getByLabelText('Amount in Japanese yen'), '10000');
-    expect(sheet.getByTestId('payment-partial')).toHaveTextContent('Part of the ¥29,359: ¥19,359 will still be owed.');
+    expect(sheet.getByTestId('payment-partial')).toHaveTextContent('Part of the ¥25,829: ¥15,829 will still be owed.');
     await user.press(sheet.getByRole('button', { name: 'Record payment' }));
-    expect(japan().payments).toEqual([expect.objectContaining({ from: 'aiko', to: 'you', amount: 10000 })]);
-    expect(screen.getByText('Recorded ¥10,000 from Aiko to you')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Aiko pays You ¥19,359' })).toBeOnTheScreen();
+    expect(japan().payments).toEqual([expect.objectContaining({ from: 'chloe', to: 'you', amount: 10000 })]);
+    expect(screen.getByText('Recorded ¥10,000 from Chloe to you')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Chloe pays You ¥15,829' })).toBeOnTheScreen();
   });
 
   it('won’t record someone paying themselves', async () => {
@@ -73,7 +73,7 @@ describe('SettleUp', () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
     await render(<Settle />);
     await user.press(screen.getByRole('button', { name: 'Share the plan' }));
-    expect(share).toHaveBeenCalledWith({ message: expect.stringMatching(/^Settling up for Japan trip:\n• Chloe pays Ben ¥118,305\n/) });
+    expect(share).toHaveBeenCalledWith({ message: expect.stringMatching(/^Settling up for Japan trip:\n• Aiko pays Ben ¥116,395\n/) });
     share.mockRestore();
   });
 });

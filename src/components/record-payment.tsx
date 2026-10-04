@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { daysAgo } from '@/lib/dates';
 import { nameInSentence, nameOf } from '@/lib/members';
-import { CURRENCIES, formatMoney, MAX_AMOUNT, parseAmount, toInputString } from '@/lib/money';
+import { readAmount } from '@/lib/calc';
+import { CURRENCIES, formatMoney, MAX_AMOUNT, toInputString } from '@/lib/money';
 import type { Group } from '@/lib/types';
 import { useGroups } from '@/store/groups';
 import { font, space, useTheme } from '@/theme';
@@ -53,7 +54,7 @@ export function RecordPayment({ group, visible, draft, onClose }: { group: Group
   const [date, setDate] = useState(daysAgo(0));
   const [note, setNote] = useState('');
 
-  const amount = parseAmount(amountText, group.currency);
+  const amount = readAmount(amountText, group.currency);
   const problem =
     from === to
       ? 'Someone can’t pay themselves.'
