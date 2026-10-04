@@ -35,7 +35,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 285 unit, property and component tests and 73 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 300 unit, property and component tests and 83 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -63,6 +63,8 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 
 - **Share a copy by link.** Friends open their own copy and pick which person they are. Share again to send an update.
 - **Back up every group to a file** and restore it on any device: a download on the web, the share sheet on a phone.
+- **Safe by default.** Saved data Quits can't read is set aside, never written over; a browser that won't save says so and offers a backup; and if a screen ever breaks, it offers a way out instead of a blank page.
+- **Private by design**, with no account, server, analytics or tracking. The [privacy page](https://ahmadbasraa818.github.io/quits/privacy) says exactly when anything leaves the device.
 - **Groups for anything:** rename them, add people, mark who has left, or delete a group and undo it.
 
 **Everywhere**
@@ -254,8 +256,8 @@ scripts/        icons, the web export and its service worker, screenshots
 
 ## Quality
 
-- **285 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **73 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **300 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **83 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;
@@ -263,7 +265,8 @@ scripts/        icons, the web export and its service worker, screenshots
   - pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection;
   - share a copy to a second, empty browser that opens it as another person; save and restore a backup;
   - keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; follow a deep link;
-  - and run axe accessibility scans of sixteen screens and sheets in light and dark mode.
+  - set aside saved data that can't be read, open the sound groups beside a damaged one, and warn when the browser won't save;
+  - and run axe accessibility scans of seventeen screens and sheets in light and dark mode.
 - **On a phone too:** opening share links, saving a backup through the share sheet and reading it back have been run on iOS, in Expo Go on the simulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
@@ -278,7 +281,18 @@ npm run export:web        # the web build, in dist/
 npm run e2e               # end-to-end tests against that build
 ```
 
-To retake the screenshots and the demo, serve the build with `node scripts/serve-dist.mjs 4173` and run `node scripts/capture.mjs`, then `python scripts/compose-hero.py` for the image at the top.
+To retake the screenshots and the demo, serve the build with `node scripts/serve-dist.mjs 4173` and run `node scripts/capture.mjs`, then `python scripts/compose-hero.py` for the image at the top and `python scripts/compose-og.py` for the link preview.
+
+### App store builds
+
+`eas.json` has a `preview` profile for internal builds and a `production` profile whose build number EAS raises on each build. With an Expo account:
+
+```bash
+npx eas-cli build --profile production --platform all
+npx eas-cli submit --platform ios      # or android
+```
+
+The privacy policy an app store asks for is at https://ahmadbasraa818.github.io/quits/privacy.
 
 ## Licence
 
