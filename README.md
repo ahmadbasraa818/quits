@@ -40,6 +40,7 @@
 - **See where the money went:** spending by category, a timeline by day, week or month, and who paid against who used.
 - **Why do I owe this?** Tap anyone in Balances for every expense and payment behind their balance, line by line, adding up exactly.
 - **Find anything:** search expenses and their notes, ignoring case and accents, or narrow the list to a category.
+- **An app on the web too:** install it from the browser and it opens without a connection. On a wide screen your groups stay in a sidebar beside whatever's open.
 - **Undo** for deleted expenses and recorded payments, light and dark themes, and screen-reader labels throughout.
 
 <p align="center">
@@ -99,11 +100,12 @@ The demo trip keeps its books in yen, but the JR Passes were bought at home: £1
 | | |
 |---|---|
 | App | Expo SDK 57, React Native 0.86 and React 19, with the React Compiler; one codebase for iOS, Android and the web |
-| Navigation | Expo Router with typed routes; modal screens for adding and editing |
+| Navigation | Expo Router with typed routes; modal screens for adding and editing; from 960 points wide, the groups in a sidebar beside the stack |
 | State | Zustand, persisted with AsyncStorage. On the web it falls back to memory if the browser blocks storage, so the demo still works when embedded in another site. |
-| Motion | Reanimated 4: sliding tab marker, animated balance bars, list layout transitions and press feedback, all off when the system asks for reduced motion |
+| Motion | Reanimated 4: the settle-up graph redrawing, charts growing in, sliding tab marker, list layout transitions and press feedback, all off when the system asks for reduced motion |
 | Gestures | React Native Gesture Handler: swipe an expense to delete it |
-| Graphics | react-native-svg for the settle-up diagram, and a generated subset of Phosphor icons (36 of them, not the whole set) |
+| Graphics | react-native-svg for the settle-up graph and the charts, and a generated subset of Phosphor icons (49 of them, not the whole set) |
+| Web app | A manifest and a service worker written at build time: it keeps every file of the current version, keyed by a hash of their contents, serves pages from the network first so a deploy shows at once, and opens the kept copy offline |
 | Type | Archivo, loaded per weight |
 
 ```
@@ -120,7 +122,7 @@ scripts/        icons, web export, screenshots
 ## Quality
 
 - **242 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **62 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
+- **65 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it
