@@ -3,7 +3,7 @@
     "name": "Quits",
     "slug": "quits",
     "description": "Split shared costs with friends, and settle up in the fewest payments.",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "quits",
@@ -11,7 +11,10 @@
     "backgroundColor": "#F5F3EE",
     "ios": {
       "bundleIdentifier": "com.ahmadbasraa.quits",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.ahmadbasraa.quits",

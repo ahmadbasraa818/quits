@@ -7,6 +7,12 @@ import { join, relative } from 'node:path';
 // of index.html lets a deep link such as /quits/group/demo_japan load the app,
 // which then routes to the right screen.
 copyFileSync('dist/index.html', 'dist/404.html');
+// The pages people reach from outside the app get a real copy, so they answer
+// 200 rather than 404: a shared group's link, which messaging apps fetch to
+// show a preview (some skip a 404), and the privacy policy an app store links.
+// Pages serves /quits/import from import.html, with no redirect to a slash.
+const ROUTES = ['import', 'privacy'];
+for (const route of ROUTES) copyFileSync('dist/index.html', `dist/${route}.html`);
 // Expo names some files with a leading underscore, which Jekyll would hide.
 writeFileSync('dist/.nojekyll', '');
 
@@ -15,7 +21,7 @@ writeFileSync('dist/.nojekyll', '');
 const walk = (folder) => readdirSync(folder).flatMap((name) => (statSync(join(folder, name)).isDirectory() ? walk(join(folder, name)) : [join(folder, name)]));
 const files = walk('dist')
   .map((file) => relative('dist', file).split('\\').join('/'))
-  .filter((file) => !['404.html', '.nojekyll', 'sw.js', 'metadata.json'].includes(file))
+  .filter((file) => !['404.html', '.nojekyll', 'sw.js', 'metadata.json', ...ROUTES.map((route) => `${route}.html`)].includes(file))
   .sort();
 const hash = createHash('sha256');
 for (const file of files) hash.update(file).update(readFileSync(join('dist', file)));
@@ -24,4 +30,4 @@ const urls = files.map((file) => `/quits/${file === 'index.html' ? '' : file}`);
 const worker = readFileSync('scripts/sw.template.js', 'utf8').replace('__VERSION__', version).replace('__FILES__', JSON.stringify(urls, null, 2));
 writeFileSync('dist/sw.js', worker);
 
-console.log(`Added dist/404.html, dist/.nojekyll and dist/sw.js (version ${version}, ${urls.length} files)`);
+console.log(`Added dist/404.html, ${ROUTES.map((route) => `dist/${route}.html`).join(', ')}, dist/.nojekyll and dist/sw.js (version ${version}, ${urls.length} files)`);

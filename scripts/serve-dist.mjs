@@ -1,5 +1,6 @@
-// Serves the web export the way GitHub Pages will: under /quits/, falling back
-// to 404.html (a copy of the app) for any path that isn't a file.
+// Serves the web export the way GitHub Pages will: under /quits/, an
+// extensionless path from its .html file, and 404.html (a copy of the app)
+// for any path that isn't a file.
 // Usage: node scripts/serve-dist.mjs [port]
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -32,6 +33,7 @@ createServer((request, response) => {
   const relative = normalize(decodeURIComponent(url.pathname.slice(BASE.length))).replace(/^(\.\.[/\\])+/, '');
   let file = join(ROOT, relative);
   if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
+  else if (!existsSync(file) && existsSync(`${file}.html`)) file = `${file}.html`;
   const found = existsSync(file) && statSync(file).isFile();
   const target = found ? file : join(ROOT, '404.html');
   response.writeHead(found ? 200 : 404, { 'Content-Type': TYPES[extname(target)] ?? 'application/octet-stream' });
