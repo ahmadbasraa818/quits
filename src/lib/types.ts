@@ -7,6 +7,11 @@ export type Member = {
   name: string;
   /** Index into the avatar palette. */
   tone: number;
+  /**
+   * They've left the group: kept for the expenses and payments they're part
+   * of, and still in the balances, but no longer offered for new expenses.
+   */
+  left?: boolean;
 };
 
 export type Expense = {
@@ -19,7 +24,9 @@ export type Expense = {
   category: CategoryId;
   /** Calendar date, YYYY-MM-DD. */
   date: string;
+  note?: string;
   createdAt: number;
+  updatedAt?: number;
 };
 
 /** Money handed over to settle up: `from` pays `to`. */
@@ -29,6 +36,7 @@ export type Payment = {
   to: string;
   amount: number;
   date: string;
+  note?: string;
   createdAt: number;
 };
 
@@ -42,4 +50,5 @@ export type Group = {
   expenses: Expense[];
   payments: Payment[];
   createdAt: number;
+  updatedAt?: number;
 };

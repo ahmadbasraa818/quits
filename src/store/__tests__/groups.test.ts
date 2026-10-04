@@ -1,3 +1,5 @@
+import type { Group } from '@/lib/types';
+
 import { useGroups } from '../groups';
 import { summarise } from '../summary';
 
@@ -61,5 +63,98 @@ describe('the groups store', () => {
     const [group] = useGroups.getState().groups;
     expect(group).toMatchObject({ id, name: 'Lisbon', currency: 'EUR', me: 'you', expenses: [], payments: [] });
     expect(group.members.map((member) => member.name)).toEqual(['You', 'Rui', 'Ana']);
+    expect(group.members.map((member) => member.tone)).toEqual([0, 1, 2]);
+  });
+
+  it('keeps an expense’s date and note, and stamps when it changed', () => {
+    const id = useGroups.getState().addExpense('demo_japan', {
+      description: 'Onsen',
+      amount: 6000,
+      paidBy: 'you',
+      split: { kind: 'equal', among: ['you', 'ben'] },
+      category: 'fun',
+      date: '2026-09-30',
+      note: 'Towels included',
+    });
+    const added = japan().expenses.find((expense) => expense.id === id)!;
+    expect(added).toMatchObject({ date: '2026-09-30', note: 'Towels included' });
+    expect(added.updatedAt).toBeUndefined();
+    useGroups.getState().updateExpense('demo_japan', id, { ...added, note: undefined, date: '2026-10-01' });
+    const edited = japan().expenses.find((expense) => expense.id === id)!;
+    expect(edited.note).toBeUndefined();
+    expect(edited.date).toBe('2026-10-01');
+    expect(edited.updatedAt).toEqual(expect.any(Number));
+  });
+});
+
+describe('editing a group', () => {
+  beforeEach(() => useGroups.getState().resetDemo());
+  const everyone = (group: Group) => group.members.map((member) => ({ id: member.id, name: member.name, left: member.left }));
+
+  it('renames the group and its people', () => {
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', {
+      name: '  Japan, autumn ',
+      currency: group.currency,
+      members: everyone(group).map((member) => (member.id === 'dev' ? { ...member, name: 'Devraj' } : member)),
+    });
+    expect(japan().name).toBe('Japan, autumn');
+    expect(japan().members.find((member) => member.id === 'dev')?.name).toBe('Devraj');
+    expect(japan().updatedAt).toEqual(expect.any(Number));
+  });
+
+  it('adds people with a fresh colour', () => {
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', { name: group.name, currency: group.currency, members: [...everyone(group), { name: 'Emi' }] });
+    const emi = japan().members.find((member) => member.name === 'Emi')!;
+    expect(emi.id).toMatch(/^m_/);
+    expect(emi.tone).toBe(5);
+  });
+
+  it('removes someone with no history, but keeps anyone with history as having left', () => {
+    const id = useGroups.getState().createGroup({ name: 'Picnic', currency: 'GBP', memberNames: ['Sam', 'Jo'] });
+    const picnic = () => useGroups.getState().groups.find((group) => group.id === id)!;
+    const [, sam, jo] = picnic().members;
+    useGroups.getState().addExpense(id, { description: 'Cake', amount: 1200, paidBy: sam.id, split: { kind: 'equal', among: ['you', sam.id] }, category: 'food', date: '2026-10-04' });
+    useGroups.getState().editGroup(id, { name: 'Picnic', currency: 'GBP', members: [{ id: 'you', name: 'You' }] });
+    expect(picnic().members.map((member) => [member.name, member.left])).toEqual([
+      ['You', undefined],
+      ['Sam', true],
+    ]);
+    expect(picnic().members.some((member) => member.id === jo.id)).toBe(false);
+  });
+
+  it('marks people as having left, and brings them back', () => {
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', { name: group.name, currency: group.currency, members: everyone(group).map((member) => (member.id === 'ben' ? { ...member, left: true } : member)) });
+    expect(japan().members.find((member) => member.id === 'ben')?.left).toBe(true);
+    useGroups.getState().editGroup('demo_japan', { name: group.name, currency: group.currency, members: everyone(japan()).map((member) => ({ ...member, left: false })) });
+    expect(japan().members.find((member) => member.id === 'ben')?.left).toBeUndefined();
+  });
+
+  it('never lets you leave, or be renamed', () => {
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', { name: group.name, currency: group.currency, members: everyone(group).map((member) => (member.id === 'you' ? { ...member, name: 'Me', left: true } : member)) });
+    expect(japan().members[0]).toEqual({ id: 'you', name: 'You', tone: 0 });
+  });
+
+  it('changes the currency only while the group is empty', () => {
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', { name: group.name, currency: 'GBP', members: everyone(group) });
+    expect(japan().currency).toBe('JPY');
+    const id = useGroups.getState().createGroup({ name: 'Paris', currency: 'GBP', memberNames: ['Léa'] });
+    const paris = useGroups.getState().groups.find((item) => item.id === id)!;
+    useGroups.getState().editGroup(id, { name: 'Paris', currency: 'EUR', members: everyone(paris) });
+    expect(useGroups.getState().groups.find((item) => item.id === id)?.currency).toBe('EUR');
+  });
+
+  it('deletes a group, and puts it back where it was', () => {
+    const deleted = useGroups.getState().deleteGroup('demo_flat');
+    expect(deleted?.index).toBe(1);
+    expect(useGroups.getState().groups.map((group) => group.id)).toEqual(['demo_japan', 'demo_brighton']);
+    useGroups.getState().restoreGroup(deleted!.group, deleted!.index);
+    useGroups.getState().restoreGroup(deleted!.group, deleted!.index);
+    expect(useGroups.getState().groups.map((group) => group.id)).toEqual(['demo_japan', 'demo_flat', 'demo_brighton']);
+    expect(useGroups.getState().deleteGroup('nope')).toBeUndefined();
   });
 });

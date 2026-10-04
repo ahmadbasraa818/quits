@@ -6,7 +6,7 @@ import { Icon, IconName } from './icon';
 import { PressableScale } from './pressable-scale';
 import { Text } from './text';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive';
 
 export function Button({
   label,
@@ -30,8 +30,8 @@ export function Button({
   testID?: string;
 }) {
   const theme = useTheme();
-  const background = { primary: theme.brand, secondary: theme.sunken, ghost: 'transparent', danger: 'transparent' }[variant];
-  const foreground = { primary: theme.onBrand, secondary: theme.ink, ghost: theme.ink, danger: theme.negative }[variant];
+  const background = { primary: theme.brand, secondary: theme.sunken, ghost: 'transparent', danger: 'transparent', destructive: theme.negative }[variant];
+  const foreground = { primary: theme.onBrand, secondary: theme.ink, ghost: theme.ink, danger: theme.negative, destructive: theme.onNegative }[variant];
   return (
     <PressableScale
       haptic

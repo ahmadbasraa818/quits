@@ -93,7 +93,10 @@ test('starts a new group and remembers it after a reload', async ({ page }) => {
   await page.goto('./');
   await page.getByTestId('new-group').click();
   await page.getByTestId('group-name').fill('Lisbon weekend');
-  await page.getByRole('tab', { name: '€ EUR' }).click();
+  await page.getByTestId('currency-field').click();
+  await page.getByTestId('currency-search').fill('euro');
+  await page.getByRole('radio', { name: 'Euro, EUR' }).click();
+  await expect(page.getByRole('button', { name: 'Currency: Euro, EUR' })).toBeVisible();
   await page.getByTestId('person-0').fill('Rui');
   await page.getByTestId('person-1').fill('Ana');
   await page.getByTestId('create-group').click();
@@ -101,6 +104,81 @@ test('starts a new group and remembers it after a reload', async ({ page }) => {
   await expect(page.getByText('No expenses yet')).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Lisbon weekend' })).toBeVisible();
+});
+
+test('edits a group: renames it, adds someone, and marks someone as having left', async ({ page }) => {
+  await openGroup(page, 'Japan trip');
+  await page.getByTestId('group-settings').click();
+  await expect(page.getByRole('heading', { name: 'Group settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Group currency: Japanese yen, JPY' })).toBeDisabled();
+  await page.getByTestId('group-name').fill('Japan, autumn');
+  await page.getByTestId('add-member').click();
+  await page.getByRole('textbox', { name: 'New person 5' }).fill('Emi');
+  await page.getByRole('checkbox', { name: 'Ben left the group' }).click();
+  await page.getByTestId('save-group').click();
+  await expect(page.getByRole('heading', { name: 'Japan, autumn' })).toBeVisible();
+  // Ben still owes his share, but isn't offered for new expenses. Emi is.
+  await tab(page, 'Balances').click();
+  await expect(page.getByLabel(/^Ben owes ¥/)).toBeVisible();
+  await tab(page, 'Expenses').click();
+  await page.getByTestId('add-expense').click();
+  await expect(page.getByTestId('payer-aiko')).toBeVisible();
+  await expect(page.getByTestId('payer-ben')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'Emi' })).toBeVisible();
+});
+
+test('won’t save two people with the same name', async ({ page }) => {
+  await openGroup(page, 'Flat 4B');
+  await page.getByTestId('group-settings').click();
+  await page.getByTestId('add-member').click();
+  await page.getByRole('textbox', { name: 'New person 3' }).fill('sam');
+  await expect(page.getByTestId('settings-problem')).toHaveText('There are two people called sam. Add an initial to tell them apart.');
+  await expect(page.getByTestId('save-group')).toBeDisabled();
+});
+
+test('removes someone who has nothing in the group yet', async ({ page }) => {
+  await page.goto('./');
+  await page.getByTestId('new-group').click();
+  await page.getByTestId('group-name').fill('Five-a-side');
+  await page.getByTestId('person-0').fill('Kofi');
+  await page.getByTestId('person-1').fill('Lena');
+  await page.getByTestId('create-group').click();
+  await page.getByTestId('group-settings').click();
+  await page.getByRole('button', { name: 'Remove Lena' }).click();
+  await page.getByTestId('save-group').click();
+  await page.getByTestId('add-expense').click();
+  await expect(page.getByRole('radio', { name: 'Kofi' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Lena' })).toHaveCount(0);
+});
+
+test('deletes a group, and undo brings it back', async ({ page }) => {
+  await openGroup(page, 'Flat 4B');
+  await page.getByTestId('group-settings').click();
+  await page.getByTestId('delete-group').click();
+  await expect(page.getByRole('heading', { name: 'Delete Flat 4B?' })).toBeVisible();
+  await page.getByTestId('confirm').click();
+  await expect(page.getByRole('heading', { name: 'Quits' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toBeVisible();
+});
+
+test('dates an expense with the calendar, and keeps its note', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 9, 4, 12));
+  await openGroup(page, 'Flat 4B');
+  await page.getByTestId('add-expense').click();
+  await page.getByTestId('amount').fill('12,40');
+  await page.getByTestId('description').fill('Milk and bread');
+  await page.getByTestId('date-field').click();
+  await page.getByRole('button', { name: 'Previous month' }).click();
+  await expect(page.getByTestId('calendar-month')).toHaveText('September 2026');
+  await page.getByRole('button', { name: 'Tuesday 15 September 2026' }).click();
+  await expect(page.getByRole('button', { name: 'Date: Tuesday 15 September 2026' })).toBeVisible();
+  await page.getByTestId('note').fill('From the corner shop');
+  await page.getByTestId('save-expense').click();
+  await expect(page.getByRole('heading', { name: 'Tue 15 Sep' })).toBeVisible();
+  await page.getByRole('button', { name: /^Milk and bread, £12\.40/ }).click();
+  await expect(page.getByTestId('note')).toHaveValue('From the corner shop');
 });
 
 test('opens a deep link straight to a group', async ({ page }) => {
@@ -129,6 +207,15 @@ test.describe('accessibility', () => {
       await tab(page, 'Expenses').click();
       await page.getByTestId('add-expense').click();
       await scan('add expense');
+      await page.getByTestId('date-field').click();
+      await scan('date sheet');
+      await page.goto('group/demo_japan/settings');
+      await scan('group settings');
+      await page.getByTestId('delete-group').click();
+      await scan('confirm delete');
+      await page.goto('new-group');
+      await page.getByTestId('currency-field').click();
+      await scan('currency picker');
     });
   }
 });

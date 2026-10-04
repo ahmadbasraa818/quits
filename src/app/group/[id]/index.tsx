@@ -5,7 +5,7 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanim
 
 import { Avatar, AvatarStack } from '@/components/avatar';
 import { BalanceBars } from '@/components/balance-bars';
-import { Button } from '@/components/button';
+import { Button, IconButton } from '@/components/button';
 import { ExpenseRow } from '@/components/expense-row';
 import { Icon } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
@@ -14,8 +14,9 @@ import { Segmented } from '@/components/segmented';
 import { SettleGraph } from '@/components/settle-graph';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
+import { useLastDefined } from '@/hooks/use-last-defined';
 import { directDebts } from '@/lib/balances';
-import { daysAgo } from '@/lib/dates';
+import { dayLabel, daysAgo } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import type { Expense, Group } from '@/lib/types';
 import { useGroup, useGroups } from '@/store/groups';
@@ -29,13 +30,6 @@ const TABS = [
   { value: 'balances', label: 'Balances' },
   { value: 'settle', label: 'Settle up' },
 ] as const;
-
-function dayLabel(date: string): string {
-  if (date === daysAgo(0)) return 'Today';
-  if (date === daysAgo(1)) return 'Yesterday';
-  const [year, month, day] = date.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(year, month - 1, day));
-}
 
 function Expenses({ group }: { group: Group }) {
   const theme = useTheme();
@@ -194,7 +188,7 @@ function SettleUp({ group, summary }: { group: Group; summary: GroupSummary }) {
 export default function GroupScreen() {
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const group = useGroup(id);
+  const group = useLastDefined(useGroup(id));
   const summary = useSummary(group);
   const [tab, setTab] = useState<Tab>('expenses');
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -222,7 +216,13 @@ export default function GroupScreen() {
         ) : null
       }
     >
-      <TopBar leading={{ icon: 'arrowLeft', label: 'Back to groups', onPress: goBack }} title={group.name} />
+      <TopBar
+        leading={{ icon: 'arrowLeft', label: 'Back to groups', onPress: goBack }}
+        title={group.name}
+        trailing={
+          <IconButton icon="gearSix" label="Group settings" testID="group-settings" onPress={() => router.push({ pathname: '/group/[id]/settings', params: { id: group.id } })} />
+        }
+      />
       <Scroll>
         <View style={styles.header}>
           <AvatarStack members={group.members} size={32} max={6} />

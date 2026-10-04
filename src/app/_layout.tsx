@@ -12,6 +12,9 @@ import { fontFiles } from '@/theme/fonts';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// A modal opened from a link still has the groups list behind it.
+export const unstable_settings = { anchor: 'index' };
+
 export default function RootLayout() {
   const theme = useTheme();
   const [fontsLoaded, fontError] = useFonts(fontFiles);
@@ -33,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="group/[id]/index" />
           <Stack.Screen name="group/[id]/expense" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="group/[id]/settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="new-group" options={{ presentation: 'modal' }} />
           <Stack.Screen name="about" options={{ presentation: 'modal' }} />
         </Stack>
