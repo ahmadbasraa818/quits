@@ -1,3 +1,5 @@
+import { fold } from './text';
+
 /**
  * Money is held as whole minor units (pence, cents, yen) in plain integers,
  * so adding up a trip's worth of expenses never picks up floating-point error.
@@ -65,15 +67,6 @@ export const CURRENCY_CODES: CurrencyCode[] = [
 export function isCurrencyCode(value: unknown): value is CurrencyCode {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(CURRENCIES, value);
 }
-
-/** Lower case without accents, so "dong" finds the đồng and "zloty" the złoty. */
-const fold = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/ł/g, 'l')
-    .toLowerCase();
 
 /** Currencies whose code or name contains what someone typed, or whose symbol it is. */
 export function searchCurrencies(query: string): CurrencyCode[] {
