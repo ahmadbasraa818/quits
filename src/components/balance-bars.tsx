@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -7,6 +8,8 @@ import type { Group } from '@/lib/types';
 import { radius, space, useTheme } from '@/theme';
 
 import { Avatar } from './avatar';
+import { Icon } from './icon';
+import { PressableScale } from './pressable-scale';
 import { Text } from './text';
 
 function Bar({ fraction, positive }: { fraction: number; positive: boolean }) {
@@ -42,7 +45,15 @@ export function BalanceBars({ group, balance }: { group: Group; balance: Record<
               ? `${name} ${isMe ? 'owe' : 'owes'} ${formatMoney(-amount, group.currency)}`
               : `${name} ${isMe ? 'are' : 'is'} square`;
         return (
-          <View key={member.id} style={styles.row} accessible accessibilityLabel={label}>
+          <PressableScale
+            key={member.id}
+            style={styles.row}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityHint="Shows how it adds up"
+            testID={`balance-${member.id}`}
+            onPress={() => router.push({ pathname: '/group/[id]/member/[memberId]', params: { id: group.id, memberId: member.id } })}
+          >
             <View style={styles.who}>
               <Avatar member={member} size={32} />
               <Text variant="bodyStrong" numberOfLines={1} style={styles.name}>
@@ -57,11 +68,12 @@ export function BalanceBars({ group, balance }: { group: Group; balance: Record<
             <Text variant="label" tone={amount > 0 ? 'positive' : amount < 0 ? 'negative' : 'muted'} style={styles.amount}>
               {formatMoney(amount, group.currency, { signed: true })}
             </Text>
-          </View>
+            <Icon name="caretRight" size={16} color={theme.inkMuted} />
+          </PressableScale>
         );
       })}
       <Text variant="caption" tone="muted" style={{ marginTop: space(2) }}>
-        Right of the line, the group owes them. Left, they owe the group.
+        Right of the line, the group owes them. Left, they owe the group. Tap anyone to see how it adds up.
       </Text>
     </View>
   );
@@ -69,7 +81,7 @@ export function BalanceBars({ group, balance }: { group: Group; balance: Record<
 
 const styles = StyleSheet.create({
   list: { gap: space(4) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space(2.5), minHeight: 44 },
   who: { width: 96, flexDirection: 'row', alignItems: 'center', gap: space(2) },
   name: { flexShrink: 1 },
   track: { flex: 1, height: 14, borderRadius: radius.pill, flexDirection: 'row', overflow: 'hidden' },
@@ -80,5 +92,5 @@ const styles = StyleSheet.create({
   fill: { position: 'absolute', top: 0, bottom: 0 },
   fillLeft: { right: 0 },
   fillRight: { left: 0 },
-  amount: { width: 96, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  amount: { width: 92, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });

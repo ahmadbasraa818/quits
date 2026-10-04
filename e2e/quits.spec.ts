@@ -294,6 +294,48 @@ test.describe('other currencies', () => {
   });
 });
 
+test.describe('understanding the money', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 9, 4, 12));
+  });
+
+  test('shows where the money went', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('spending-strip').click();
+    await expect(page.getByRole('heading', { name: 'Spending' })).toBeVisible();
+    await expect(page.getByTestId('spending-summary')).toHaveText('11 expenses over 12 days, about ¥59,299 a day');
+    await expect(page.getByLabel('Transport: ¥351,326, 49%, 3 expenses')).toBeVisible();
+    await expect(page.getByLabel('Other: ¥1,000, <1%, 1 expense')).toBeVisible();
+    await expect(page.getByTestId('busiest')).toHaveText('Busiest day: Thu 27 Aug, ¥271,576');
+    await page.getByRole('button', { name: 'Saturday 5 September 2026: ¥126,000 on 1 expense' }).click();
+    await expect(page.getByTestId('busiest')).toHaveText('Sat 5 Sep: ¥126,000');
+    await expect(page.getByRole('button', { name: 'Aiko paid ¥29,200 and used ¥143,705' })).toBeVisible();
+  });
+
+  test('explains a balance line by line', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await tab(page, 'Balances').click();
+    await page.getByRole('button', { name: 'Aiko owes ¥114,505' }).click();
+    await expect(page.getByTestId('standing')).toHaveText('Aiko owes ¥114,505');
+    await expect(page.getByLabel('Paid for: ¥29,200')).toBeVisible();
+    await expect(page.getByLabel('Their share: ¥143,705')).toBeVisible();
+    await expect(page.getByTestId('balance')).toHaveText('-¥114,505');
+    await expect(page.getByRole('button', { name: 'JR Passes, bought at home, Thu 27 Aug · share ¥54,315: -¥54,315' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'teamLab Planets, Tue 1 Sep · paid ¥19,200, share ¥3,840: +¥15,360' })).toBeVisible();
+  });
+
+  test('finds expenses by name and by category', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await page.getByLabel('Search expenses').fill('ramen');
+    await expect(page.getByTestId('filter-summary')).toHaveText('1 expense · ¥7,480');
+    await page.getByTestId('clear-filter').click();
+    await page.getByRole('radio', { name: 'Stay' }).click();
+    await expect(page.getByTestId('filter-summary')).toHaveText('2 expenses · ¥294,000');
+    await expect(page.getByRole('button', { name: /^Ryokan, two nights/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Ichiran ramen/ })).toHaveCount(0);
+  });
+});
+
 test('opens a deep link straight to a group', async ({ page }) => {
   await page.goto('group/demo_flat');
   await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
@@ -329,6 +371,10 @@ test.describe('accessibility', () => {
       await scan('conversion');
       await page.getByTestId('date-field').click();
       await scan('date sheet');
+      await page.goto('group/demo_japan/spending');
+      await scan('spending');
+      await page.goto('group/demo_japan/member/aiko');
+      await scan('statement');
       await page.goto('group/demo_japan/settings');
       await scan('group settings');
       await page.getByTestId('delete-group').click();

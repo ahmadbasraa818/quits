@@ -1,23 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { AvatarStack } from '@/components/avatar';
 import { BalanceBars } from '@/components/balance-bars';
 import { Button, IconButton } from '@/components/button';
-import { ExpenseRow } from '@/components/expense-row';
-import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
+import { ExpenseList } from '@/components/expense-list';
+import { Screen, Scroll, TopBar } from '@/components/layout';
 import { Money } from '@/components/money';
 import { Segmented } from '@/components/segmented';
 import { SettleUp } from '@/components/settle-up';
 import { Text } from '@/components/text';
-import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
-import { dayLabel } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
-import type { Expense, Group } from '@/lib/types';
-import { useGroup, useGroups } from '@/store/groups';
+import { useGroup } from '@/store/groups';
 import { useSummary } from '@/store/summary';
 import { radius, space, useTheme } from '@/theme';
 
@@ -28,66 +24,6 @@ const TABS = [
   { value: 'balances', label: 'Balances' },
   { value: 'settle', label: 'Settle up' },
 ] as const;
-
-function Expenses({ group }: { group: Group }) {
-  const theme = useTheme();
-  const removeExpense = useGroups((state) => state.removeExpense);
-  const restoreExpense = useGroups((state) => state.restoreExpense);
-  const showToast = useToast((state) => state.show);
-  const sorted = [...group.expenses].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
-  const days: { date: string; items: Expense[] }[] = [];
-  for (const expense of sorted) {
-    const last = days[days.length - 1];
-    if (last && last.date === expense.date) last.items.push(expense);
-    else days.push({ date: expense.date, items: [expense] });
-  }
-
-  if (sorted.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text variant="heading" accessibilityRole="header">
-          No expenses yet
-        </Text>
-        <Text variant="body" tone="muted" style={{ textAlign: 'center' }}>
-          Add what someone paid for, and Quits keeps the score.
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <View>
-      {days.map((day) => (
-        <View key={day.date}>
-          <SectionLabel>{dayLabel(day.date)}</SectionLabel>
-          <View style={[styles.panel, { backgroundColor: theme.card, borderColor: theme.line }]}>
-            {day.items.map((expense, index) => (
-              <Animated.View
-                key={expense.id}
-                entering={FadeIn}
-                exiting={FadeOut}
-                layout={LinearTransition}
-                style={index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.line } : undefined}
-              >
-                <ExpenseRow
-                  expense={expense}
-                  group={group}
-                  onPress={() => router.push({ pathname: '/group/[id]/expense', params: { id: group.id, expenseId: expense.id } })}
-                  onDelete={() => {
-                    const removed = removeExpense(group.id, expense.id);
-                    if (removed) showToast(`Deleted ${removed.description}`, { label: 'Undo', onPress: () => restoreExpense(group.id, removed) });
-                  }}
-                />
-              </Animated.View>
-            ))}
-          </View>
-        </View>
-      ))}
-      <Text variant="caption" tone="muted" style={styles.hint}>
-        Swipe an expense left to delete it, or tap it to edit.
-      </Text>
-    </View>
-  );
-}
 
 export default function GroupScreen() {
   const theme = useTheme();
@@ -142,7 +78,7 @@ export default function GroupScreen() {
         </View>
         <Segmented label="Group sections" options={TABS} value={tab} onChange={setTab} />
         <View style={styles.tab}>
-          {tab === 'expenses' ? <Expenses group={group} /> : null}
+          {tab === 'expenses' ? <ExpenseList group={group} /> : null}
           {tab === 'balances' ? <BalanceBars group={group} balance={summary.balance} /> : null}
           {tab === 'settle' ? <SettleUp group={group} summary={summary} /> : null}
         </View>
@@ -155,7 +91,5 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: space(1.5), paddingTop: space(2), paddingBottom: space(5) },
   pill: { borderRadius: radius.pill, paddingVertical: space(1.5), paddingHorizontal: space(3.5), marginTop: space(2) },
   tab: { paddingTop: space(2) },
-  panel: { borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  hint: { textAlign: 'center', marginTop: space(5) },
   empty: { alignItems: 'center', gap: space(3), paddingVertical: space(12), paddingHorizontal: space(6) },
 });

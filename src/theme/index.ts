@@ -23,6 +23,8 @@ export type Theme = {
   scrim: string;
   /** Avatar backgrounds; text on them is ink. */
   tones: string[];
+  /** Distinct colours for charts, the brand first. */
+  chart: string[];
 };
 
 const light: Theme = {
@@ -40,6 +42,7 @@ const light: Theme = {
   onNegative: '#FFFFFF',
   scrim: 'rgba(22, 23, 26, 0.45)',
   tones: ['#FFD9C8', '#D7E6FF', '#D3F1E1', '#F1DCF8', '#FFEFB8', '#DCE2EE', '#F9D5DF', '#D2EDF1'],
+  chart: ['#FF5A1F', '#2D6BE4', '#0B8A5F', '#8E4EC6', '#D99A00', '#D6407A', '#178A99', '#7A7F88'],
 };
 
 const dark: Theme = {
@@ -57,6 +60,7 @@ const dark: Theme = {
   onNegative: '#16171A',
   scrim: 'rgba(0, 0, 0, 0.62)',
   tones: ['#5C2F1E', '#23395E', '#1E4A36', '#4A2A58', '#5B4A15', '#2F3647', '#5B2538', '#1F4A51'],
+  chart: ['#FF6A33', '#6B9BFF', '#3DCB8E', '#B888F2', '#F2C14E', '#F27BA6', '#4CC3D2', '#A6A9AF'],
 };
 
 export const themes: Record<'light' | 'dark', Theme> = { light, dark };

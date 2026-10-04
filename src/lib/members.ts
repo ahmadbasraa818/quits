@@ -1,3 +1,4 @@
+import { formatMoney } from './money';
 import { participantsOf } from './split';
 import type { Group, Member } from './types';
 
@@ -16,6 +17,15 @@ export function nameOf(group: Pick<Group, 'members' | 'me'>, id: string): string
 /** A name as it reads mid-sentence: "you" for the person using the app. */
 export function nameInSentence(group: Pick<Group, 'members' | 'me'>, id: string): string {
   return id === group.me ? 'you' : nameOf(group, id);
+}
+
+/** Where someone stands: "You’re owed £12.00", "Aiko owes ¥114,505", "Ben is square". */
+export function standing(group: Pick<Group, 'members' | 'me' | 'currency'>, id: string, balance: number): string {
+  const isMe = id === group.me;
+  const name = nameOf(group, id);
+  if (balance > 0) return `${isMe ? 'You’re' : `${name} is`} owed ${formatMoney(balance, group.currency)}`;
+  if (balance < 0) return `${name} ${isMe ? 'owe' : 'owes'} ${formatMoney(-balance, group.currency)}`;
+  return `${isMe ? 'You’re' : `${name} is`} square`;
 }
 
 /** The people who can be picked for a new expense: everyone who hasn't left. */
