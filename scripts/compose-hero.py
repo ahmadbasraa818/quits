@@ -2,7 +2,8 @@
 
 from PIL import Image, ImageDraw
 
-SHOTS = ["docs/light-groups.png", "docs/light-settle.png", "docs/dark-add.png"]
+# The groups, a trip's plan to settle up, and where its money went, in both themes.
+SHOTS = ["docs/light-groups.png", "docs/light-settle.png", "docs/dark-spending.png"]
 BACKGROUND = (237, 233, 225)
 PAD, GAP, RADIUS = 96, 64, 64
 
