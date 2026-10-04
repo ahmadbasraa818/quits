@@ -1,11 +1,16 @@
 import { CurrencyCode, formatMoney } from './money';
 import type { Expense } from './types';
 
+/** One line of an itemised bill, shared equally by whoever had it. */
+export type Item = { id: string; label: string; amount: number; among: string[] };
+
 /** How an expense is divided between people. Amounts are in minor units. */
 export type Split =
   | { kind: 'equal'; among: string[] }
   | { kind: 'shares'; shares: Record<string, number> }
-  | { kind: 'exact'; amounts: Record<string, number> };
+  | { kind: 'exact'; amounts: Record<string, number> }
+  /** Each item shared by whoever had it; `extras` (tax, service, tip) spread in proportion to what each person had. */
+  | { kind: 'items'; items: Item[]; extras: number };
 
 export type SplitKind = Split['kind'];
 
@@ -41,11 +46,45 @@ export function allocate(total: number, weights: number[]): number[] {
   return parts;
 }
 
+/** What each person had of an itemised bill, before tax, service and tip. */
+export function itemSubtotals(items: Item[]): Record<string, number> {
+  const subtotals: Record<string, number> = {};
+  for (const item of items) {
+    if (item.amount <= 0 || item.among.length === 0) continue;
+    const parts = allocate(
+      item.amount,
+      item.among.map(() => 1)
+    );
+    item.among.forEach((id, index) => {
+      subtotals[id] = (subtotals[id] ?? 0) + parts[index];
+    });
+  }
+  return subtotals;
+}
+
+/** An itemised bill's total: the items, and the extras on top. */
+export function itemsTotal(split: Extract<Split, { kind: 'items' }>): number {
+  return split.items.reduce((sum, item) => sum + Math.max(0, item.amount), 0) + split.extras;
+}
+
 /** Each person's share of an expense, in minor units. The shares always add up to `amount`. */
 export function sharesOf(amount: number, split: Split): Record<string, number> {
   const result: Record<string, number> = {};
   if (split.kind === 'exact') {
     for (const [id, value] of Object.entries(split.amounts)) if (value > 0) result[id] = value;
+    return result;
+  }
+  if (split.kind === 'items') {
+    // The whole amount, extras and all, divided in proportion to what each person had.
+    const subtotals = Object.entries(itemSubtotals(split.items)).filter(([, value]) => value > 0);
+    if (subtotals.length === 0) return result;
+    const parts = allocate(
+      amount,
+      subtotals.map(([, value]) => value)
+    );
+    subtotals.forEach(([id], index) => {
+      if (parts[index] > 0) result[id] = parts[index];
+    });
     return result;
   }
   const entries =
@@ -86,6 +125,7 @@ export function expenseShares(expense: Pick<Expense, 'amount' | 'split' | 'origi
 /** Who takes part in an expense. */
 export function participantsOf(split: Split): string[] {
   if (split.kind === 'equal') return split.among;
+  if (split.kind === 'items') return Object.keys(itemSubtotals(split.items));
   const values = split.kind === 'shares' ? split.shares : split.amounts;
   return Object.entries(values)
     .filter(([, value]) => value > 0)
@@ -94,6 +134,14 @@ export function participantsOf(split: Split): string[] {
 
 /** A reason the split can't be saved, in words a person can act on, or null if it's fine. */
 export function splitProblem(amount: number, split: Split, currency: CurrencyCode): string | null {
+  if (split.kind === 'items') {
+    const priced = split.items.filter((item) => item.amount > 0);
+    if (priced.length === 0) return 'Add an item with its price.';
+    const unclaimed = priced.find((item) => item.among.length === 0);
+    if (unclaimed) return `Say who had ${unclaimed.label.trim() ? `“${unclaimed.label.trim()}”` : 'each item'}.`;
+    if (split.extras < 0) return 'Tax, service and tip can’t be below zero.';
+    if (itemsTotal(split) !== amount) return `The items come to ${formatMoney(itemsTotal(split), currency)}, not ${formatMoney(amount, currency)}.`;
+  }
   if (!(amount > 0)) return 'Enter an amount above zero.';
   if (participantsOf(split).length === 0) return 'Choose at least one person to split with.';
   if (split.kind === 'shares') {

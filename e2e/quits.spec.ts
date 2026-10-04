@@ -12,7 +12,7 @@ const tab = (page: Page, name: string) => page.getByRole('tab', { name });
 test('shows what you are owed across the demo groups', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Quits' })).toBeVisible();
-  await expect(page.getByText('¥48,624').first()).toBeVisible();
+  await expect(page.getByText('¥46,134').first()).toBeVisible();
   for (const name of ['Japan trip', 'Flat 4B', 'Brighton day trip']) {
     await expect(page.getByRole('button', { name: new RegExp(`^${name}\\.`) })).toBeVisible();
   }
@@ -36,14 +36,14 @@ test('settles the Japan trip in 4 payments instead of 10', async ({ page }) => {
 test('records part of a payment, and the plan follows', async ({ page }) => {
   await openGroup(page, 'Japan trip');
   await tab(page, 'Settle up').click();
-  await page.getByRole('button', { name: 'Aiko pays You ¥29,359' }).click();
-  await expect(page.getByLabel('Amount in Japanese yen')).toHaveValue('29359');
+  await page.getByRole('button', { name: 'Chloe pays You ¥25,829' }).click();
+  await expect(page.getByLabel('Amount in Japanese yen')).toHaveValue('25829');
   await page.getByLabel('Amount in Japanese yen').fill('10000');
-  await expect(page.getByTestId('payment-partial')).toHaveText('Part of the ¥29,359: ¥19,359 will still be owed.');
+  await expect(page.getByTestId('payment-partial')).toHaveText('Part of the ¥25,829: ¥15,829 will still be owed.');
   await page.getByTestId('payment-note').fill('PayPay');
   await page.getByTestId('save-payment').click();
-  await expect(page.getByRole('button', { name: 'Aiko pays You ¥19,359' })).toBeVisible();
-  await expect(page.getByLabel(/^Aiko paid you ¥10,000, Today, PayPay$/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chloe pays You ¥15,829' })).toBeVisible();
+  await expect(page.getByLabel(/^Chloe paid you ¥10,000, Today, PayPay$/)).toBeVisible();
 });
 
 test('deletes a recorded payment, and undo brings it back', async ({ page }) => {
@@ -67,10 +67,10 @@ test('shares the plan, copying it where the browser can’t share', async ({ pag
   expect(copied).toBe(
     [
       'Settling up for Japan trip:',
-      '• Chloe pays Ben ¥118,305',
-      '• Aiko pays Ben ¥85,146',
-      '• Aiko pays me ¥29,359',
-      '• Dev pays me ¥19,265',
+      '• Aiko pays Ben ¥116,395',
+      '• Chloe pays Ben ¥84,466',
+      '• Chloe pays me ¥25,829',
+      '• Dev pays me ¥20,305',
       '',
       '4 payments instead of 10 pair by pair, worked out with Quits: https://ahmadbasraa818.github.io/quits/',
     ].join('\n')
@@ -303,23 +303,23 @@ test.describe('understanding the money', () => {
     await openGroup(page, 'Japan trip');
     await page.getByTestId('spending-strip').click();
     await expect(page.getByRole('heading', { name: 'Spending' })).toBeVisible();
-    await expect(page.getByTestId('spending-summary')).toHaveText('11 expenses over 12 days, about ¥59,299 a day');
+    await expect(page.getByTestId('spending-summary')).toHaveText('12 expenses over 12 days, about ¥60,111 a day');
     await expect(page.getByLabel('Transport: ¥351,326, 49%, 3 expenses')).toBeVisible();
     await expect(page.getByLabel('Other: ¥1,000, <1%, 1 expense')).toBeVisible();
     await expect(page.getByTestId('busiest')).toHaveText('Busiest day: Thu 27 Aug, ¥271,576');
-    await page.getByRole('button', { name: 'Saturday 5 September 2026: ¥126,000 on 1 expense' }).click();
-    await expect(page.getByTestId('busiest')).toHaveText('Sat 5 Sep: ¥126,000');
-    await expect(page.getByRole('button', { name: 'Aiko paid ¥29,200 and used ¥143,705' })).toBeVisible();
+    await page.getByRole('button', { name: 'Saturday 5 September 2026: ¥135,750 on 2 expenses' }).click();
+    await expect(page.getByTestId('busiest')).toHaveText('Sat 5 Sep: ¥135,750');
+    await expect(page.getByRole('button', { name: 'Aiko paid ¥29,200 and used ¥145,595' })).toBeVisible();
   });
 
   test('explains a balance line by line', async ({ page }) => {
     await openGroup(page, 'Japan trip');
     await tab(page, 'Balances').click();
-    await page.getByRole('button', { name: 'Aiko owes ¥114,505' }).click();
-    await expect(page.getByTestId('standing')).toHaveText('Aiko owes ¥114,505');
+    await page.getByRole('button', { name: 'Aiko owes ¥116,395' }).click();
+    await expect(page.getByTestId('standing')).toHaveText('Aiko owes ¥116,395');
     await expect(page.getByLabel('Paid for: ¥29,200')).toBeVisible();
-    await expect(page.getByLabel('Their share: ¥143,705')).toBeVisible();
-    await expect(page.getByTestId('balance')).toHaveText('-¥114,505');
+    await expect(page.getByLabel('Their share: ¥145,595')).toBeVisible();
+    await expect(page.getByTestId('balance')).toHaveText('-¥116,395');
     await expect(page.getByRole('button', { name: 'JR Passes, bought at home, Thu 27 Aug · share ¥54,315: -¥54,315' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'teamLab Planets, Tue 1 Sep · paid ¥19,200, share ¥3,840: +¥15,360' })).toBeVisible();
   });
@@ -377,6 +377,44 @@ test.describe('quick add', () => {
     await expect(page.getByTestId('quick-strangers')).toHaveText('Bob isn’t in Japan trip. Add them in group settings first.');
     await expect(page.getByTestId('quick-save')).toBeDisabled();
   });
+});
+
+test('splits an itemised bill, with service shared in proportion', async ({ page }) => {
+  await openGroup(page, 'Flat 4B');
+  await page.getByTestId('add-expense').click();
+  await page.getByTestId('description').fill('Curry house');
+  await page.getByRole('tab', { name: 'Items' }).click();
+  await page.getByTestId('item-label-0').fill('Lamb curry');
+  await page.getByTestId('item-amount-0').fill('12.50');
+  await page.getByRole('checkbox', { name: 'You had Lamb curry' }).click();
+  await page.getByTestId('add-item').click();
+  await page.getByTestId('item-label-1').fill('Veg thali');
+  await page.getByTestId('item-amount-1').fill('9.50');
+  await page.getByRole('checkbox', { name: 'Sam had Veg thali' }).click();
+  await page.getByTestId('add-item').click();
+  await page.getByTestId('item-label-2').fill('Naans to share');
+  await page.getByTestId('item-amount-2').fill('6');
+  for (const name of ['You', 'Sam', 'Priya']) await page.getByRole('checkbox', { name: `${name} had Naans to share` }).click();
+  await page.getByTestId('item-extras').fill('2.80');
+  // £28.00 of food and £2.80 of service: £14.50, £11.50 and £2.00 of food carry £1.45, £1.15 and £0.20.
+  await expect(page.getByTestId('amount')).toHaveValue('30.80');
+  await page.getByTestId('save-expense').click();
+  await expect(page.getByRole('button', { name: /^Curry house, £30\.80, paid by You, you lent £14\.85/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Curry house/ }).click();
+  await expect(page.getByTestId('item-label-2')).toHaveValue('Naans to share');
+});
+
+test('works out a sum typed into the amount', async ({ page }) => {
+  await openGroup(page, 'Japan trip');
+  await page.getByTestId('add-expense').click();
+  await page.getByTestId('amount').fill('4800');
+  await page.getByRole('button', { name: 'Type divided by' }).click();
+  await page.getByTestId('amount').press('End');
+  await page.getByTestId('amount').pressSequentially('3');
+  await expect(page.getByTestId('amount-sum')).toHaveText('= ¥1,600');
+  await page.getByTestId('description').fill('Karaoke, my third');
+  await page.getByTestId('save-expense').click();
+  await expect(page.getByRole('button', { name: /^Karaoke, my third, ¥1,600/ })).toBeVisible();
 });
 
 test('opens a deep link straight to a group', async ({ page }) => {

@@ -17,10 +17,10 @@ describe('the plan as a message', () => {
     expect(planText(japan, summary.settlement.transfers, summary.directCount)).toBe(
       [
         'Settling up for Japan trip:',
-        '• Chloe pays Ben ¥118,305',
-        '• Aiko pays Ben ¥85,146',
-        '• Aiko pays me ¥29,359',
-        '• Dev pays me ¥19,265',
+        '• Aiko pays Ben ¥116,395',
+        '• Chloe pays Ben ¥84,466',
+        '• Chloe pays me ¥25,829',
+        '• Dev pays me ¥20,305',
         '',
         '4 payments instead of 10 pair by pair, worked out with Quits: https://ahmadbasraa818.github.io/quits/',
       ].join('\n')

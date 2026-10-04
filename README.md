@@ -32,7 +32,8 @@
 - **Pay in one currency, settle in another:** each expense can be in its own currency, converted at the European Central Bank’s rate for its date or at a rate you type, fixed when you save it.
 - **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
 - **Quick add:** type “Ramen ¥4,800, Aiko paid, split with Ben and me” and the expense fills itself in, with anything it assumed marked before you save.
-- **Split any way:** equally, by shares, or by exact amounts. Every split adds up to the penny.
+- **Split any way:** equally, by shares, by exact amounts, or item by item, with tax, service and tip shared in proportion to what everyone had. Every split adds up to the penny.
+- **Sums in any amount field:** “4800÷3” is ¥1,600, worked out exactly, with + − × ÷ buttons for phones.
 - **See where everyone stands:** each balance is a bar either side of zero.
 - **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen, and Quits says why the plan can’t be any shorter.
 - **Record payments as they happen:** a whole payment with a tap, part of one, or one made outside the plan, with a history you can undo. Share the plan with the group as a message.
@@ -63,6 +64,8 @@ It is checked, not just argued. Property tests (fast-check) generate hundreds of
 - Money is held as whole minor units (pence, cents, yen), so totals never pick up floating-point error.
 - When a bill won’t divide evenly, the leftover units go to the largest fractional parts, using the largest remainder method. £10 between three people is £3.34, £3.33 and £3.33, never £9.99 or £10.01. Property tests confirm that every split adds up exactly and that no one is ever more than a unit from their fair share.
 - Amounts are parsed from what people type without ever going through floating point, and each currency keeps its own number of decimals: yen has none. The decimal comma works too, so “12,50” is twelve fifty and “1,250” is one thousand two hundred and fifty.
+- An itemised bill splits each item between whoever had it. Tax, service and tip are then shared in proportion to what everyone had: £28.00 of food with £2.80 of service gives £14.50, £11.50 and £2.00 of food £1.45, £1.15 and £0.20. That's one largest-remainder division of the whole bill by each person's items.
+- A sum typed into an amount field (“12.50 + 3.20 × 2”, “4800÷3”) is worked out in exact fractions, brackets and all, and rounded once to the smallest unit, so “0.1+0.2” is exactly 30p.
 
 ## Quick add
 
@@ -116,8 +119,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **215 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **58 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
+- **242 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **62 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; split an itemised bill with service; type a sum; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it

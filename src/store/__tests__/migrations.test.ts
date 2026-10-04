@@ -5,8 +5,15 @@ const jrPass = (groups: { id: string; expenses: { description: string }[] }[]) =
   groups.find((group) => group.id === 'demo_japan')?.expenses.some((expense) => expense.description === 'JR Passes, bought at home');
 
 describe('migrating saved data', () => {
-  it('is at version 2', () => {
-    expect(STORE_VERSION).toBe(2);
+  it('is at version 3', () => {
+    expect(STORE_VERSION).toBe(3);
+  });
+
+  it('gives a version 2 demo no one touched the itemised bill too', () => {
+    const saved = { groups: demoGroups(new Date(2026, 0, 15), 2) };
+    const okonomiyaki = (groups: typeof saved.groups) => groups[0].expenses.some((expense) => expense.split.kind === 'items');
+    expect(okonomiyaki(saved.groups)).toBe(false);
+    expect(okonomiyaki(migrate(saved, 2).groups)).toBe(true);
   });
 
   it('gives a version 1 demo no one touched the new demo', () => {
@@ -39,6 +46,6 @@ describe('migrating saved data', () => {
 
   it('leaves current data alone', () => {
     const saved = { groups: demoGroups(new Date(2026, 0, 15)) };
-    expect(migrate(saved, 2).groups).toBe(saved.groups);
+    expect(migrate(saved, 3).groups).toBe(saved.groups);
   });
 });

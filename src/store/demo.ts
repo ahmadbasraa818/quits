@@ -2,8 +2,11 @@ import { daysAgo } from '@/lib/dates';
 import { convert, Rate } from '@/lib/fx';
 import type { Expense, Group, Payment } from '@/lib/types';
 
-/** The demo changes with the app: 2 added an expense paid in pounds to the Japan trip. */
-export const DEMO_VERSION = 2;
+/**
+ * The demo changes with the app, in step with the saved data's version: 2
+ * added JR Passes paid in pounds to the Japan trip, 3 an itemised bill.
+ */
+export const DEMO_VERSION = 3;
 
 /** An expense `days` ago, and the demo version that first had it. */
 type Draft = Omit<Expense, 'id' | 'createdAt' | 'date'> & { days: number; since?: number };
@@ -65,6 +68,26 @@ export function demoGroups(now = new Date(), version = DEMO_VERSION): Group[] {
         paidBy: 'ben',
         category: 'transport',
         split: { kind: 'equal', among: ['you', 'aiko', 'ben', 'chloe', 'dev'] },
+      },
+      {
+        days: 29,
+        since: 3,
+        description: 'Okonomiyaki in Dotonbori',
+        amount: 9750,
+        paidBy: 'chloe',
+        category: 'food',
+        split: {
+          kind: 'items',
+          items: [
+            { id: 'okonomi_1', label: 'Pork okonomiyaki', amount: 1450, among: ['you'] },
+            { id: 'okonomi_2', label: 'Seafood okonomiyaki', amount: 1650, among: ['aiko'] },
+            { id: 'okonomi_3', label: 'Modan-yaki', amount: 1550, among: ['ben'] },
+            { id: 'okonomi_4', label: 'Cheese okonomiyaki', amount: 1500, among: ['chloe'] },
+            { id: 'okonomi_5', label: 'Yakisoba to share', amount: 1200, among: ['you', 'aiko', 'ben', 'chloe', 'dev'] },
+            { id: 'okonomi_6', label: 'Beers', amount: 2400, among: ['you', 'ben', 'dev'] },
+          ],
+          extras: 0,
+        },
       },
     ],
     [],

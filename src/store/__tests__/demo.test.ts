@@ -29,7 +29,13 @@ describe('demo groups', () => {
 
   it('keeps every version 1 expense, under the same id', () => {
     const before = demoGroups(new Date(2026, 9, 3), 1)[0].expenses.map((expense) => expense.id);
-    expect(groups[0].expenses.map((expense) => expense.id)).toEqual([...before, 'japan_e10']);
+    expect(groups[0].expenses.map((expense) => expense.id)).toEqual([...before, 'japan_e10', 'japan_e11']);
+  });
+
+  it('itemises the okonomiyaki, adding up to the yen', () => {
+    const okonomiyaki = groups[0].expenses.find((expense) => expense.split.kind === 'items');
+    expect(okonomiyaki?.description).toBe('Okonomiyaki in Dotonbori');
+    expect(okonomiyaki?.amount).toBe(9750);
   });
 
   it('show off the saving on the trip, and one group already settled', () => {
