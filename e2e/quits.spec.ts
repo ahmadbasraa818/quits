@@ -417,6 +417,41 @@ test('works out a sum typed into the amount', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^Karaoke, my third, ¥1,600/ })).toBeVisible();
 });
 
+test('keeps the groups beside the open group on a wide screen', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The sidebar is for wide screens');
+  await page.goto('./');
+  const sidebar = page.getByRole('navigation', { name: 'Your groups' });
+  await expect(sidebar).toBeVisible();
+  await page.getByTestId('open-demo').click();
+  await expect(page.getByRole('heading', { name: 'Japan trip' })).toBeVisible();
+  await expect(sidebar.getByRole('button', { name: /^Japan trip\./ })).toHaveAttribute('aria-current', 'page');
+  // Beside the sidebar there's no back to go to.
+  await expect(page.getByRole('button', { name: 'Back to groups' })).toHaveCount(0);
+  await sidebar.getByRole('button', { name: /^Flat 4B\./ }).click();
+  await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
+  await expect(sidebar.getByRole('button', { name: /^Flat 4B\./ })).toHaveAttribute('aria-current', 'page');
+  // Switching groups replaces the one open, so back returns to the start, not to the Japan trip.
+  await page.goBack();
+  await expect(page.getByTestId('open-demo')).toBeVisible();
+});
+
+test.describe('offline', () => {
+  test.use({ serviceWorkers: 'allow' });
+
+  test('opens without a connection once it has been opened', async ({ page, context }) => {
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'Quits' }).first()).toBeVisible();
+    // The worker keeps every file before it takes over.
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(async () => (await caches.keys()).some((key) => key.startsWith('quits-')));
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Quits' }).first()).toBeVisible();
+    await page.goto('group/demo_flat');
+    await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
+  });
+});
+
 test('opens a deep link straight to a group', async ({ page }) => {
   await page.goto('group/demo_flat');
   await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
