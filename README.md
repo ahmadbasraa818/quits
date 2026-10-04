@@ -31,6 +31,7 @@
 - **Groups** for a trip, a flat or a night out, in any of 33 currencies. Rename them, add people, mark who has left, or delete a group and undo it.
 - **Pay in one currency, settle in another:** each expense can be in its own currency, converted at the European Central Bank’s rate for its date or at a rate you type, fixed when you save it.
 - **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
+- **Quick add:** type “Ramen ¥4,800, Aiko paid, split with Ben and me” and the expense fills itself in, with anything it assumed marked before you save.
 - **Split any way:** equally, by shares, or by exact amounts. Every split adds up to the penny.
 - **See where everyone stands:** each balance is a bar either side of zero.
 - **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen, and Quits says why the plan can’t be any shorter.
@@ -62,6 +63,23 @@ It is checked, not just argued. Property tests (fast-check) generate hundreds of
 - Money is held as whole minor units (pence, cents, yen), so totals never pick up floating-point error.
 - When a bill won’t divide evenly, the leftover units go to the largest fractional parts, using the largest remainder method. £10 between three people is £3.34, £3.33 and £3.33, never £9.99 or £10.01. Property tests confirm that every split adds up exactly and that no one is ever more than a unit from their fair share.
 - Amounts are parsed from what people type without ever going through floating point, and each currency keeps its own number of decimals: yen has none. The decimal comma works too, so “12,50” is twelve fifty and “1,250” is one thousand two hundred and fifty.
+
+## Quick add
+
+[`parseQuickAdd`](src/lib/quick-add.ts) reads a sentence into an expense. It's a small scanner rather than a language model, so it's instant, works offline, and every case can be tested.
+
+- **What it does:**
+  - It folds the text (lower case, no accents) code point by code point, so positions line up with the original.
+  - It splits the text into words, numbers, currency symbols and punctuation.
+  - It claims what it recognises in order: dates first (so "3 days ago" isn't an amount), then the amount, who paid, and who shared.
+- **What it reads:**
+  - **Dates:** "last night", "on Friday", "5 Sep", "12th of September".
+  - **Amounts:** "¥4,800", "30 euros", "2.5k yen", "23,40 €", "A$45".
+  - **Who paid:** "Aiko paid", "paid by Ben", "drinks on me", "I got it".
+  - **Who shared:** "with Ben and me", "between Aiko, Ben & Chloe", "for everyone except Dev", "just Aiko".
+- **How names are matched:** by full name, unique first name, or a unique start of one ("chlo" is Chloe). A list of common words is never read as a name, so "the" isn't Theo. A capitalised word in a name's place that matches no one is reported ("Bob isn't in Japan trip") rather than guessed.
+- **The rest:** what's left, trimmed of the joining words, is the description, and a keyword in it suggests the category. Anything the sentence doesn't say falls back to the form's defaults, and the preview marks it "assumed".
+- **Tests:** a table of 20 sentences, plus a property that generates sentences in four phrasings from random amounts, payers and lists of people, and checks every field comes back.
 
 ## Exact currency conversion
 
@@ -98,8 +116,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **187 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **52 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of thirteen screens and sheets in light and dark mode.
+- **215 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **58 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard; read the spending charts and a person’s statement; search and filter; add an expense by sentence and hand one to the full form; create, edit and delete groups; date an expense; pay in euros at a served ECB rate, in đồng at a typed rate, and without a connection; follow a deep link; and run axe accessibility scans of fourteen screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it

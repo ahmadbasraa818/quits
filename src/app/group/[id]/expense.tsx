@@ -22,7 +22,9 @@ import { convert } from '@/lib/fx';
 import { nameOf as memberName } from '@/lib/members';
 import { CURRENCIES, CurrencyCode, formatMoney, MAX_AMOUNT, parseAmount, toInputString } from '@/lib/money';
 import { sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
+import type { QuickDraft } from '@/lib/quick-add';
 import type { Expense, Group, Member } from '@/lib/types';
+import { useDraft } from '@/store/draft';
 import { useGroup, useGroups } from '@/store/groups';
 import { useEcbRate } from '@/store/rates';
 import { font, radius, space, useTheme } from '@/theme';
@@ -33,9 +35,25 @@ const SPLITS = [
   { value: 'exact', label: 'Exact' },
 ] as const;
 
-/** The form’s starting state: a blank expense, or the one being edited. */
-function initialState(group: Group, expense: Expense | undefined, people: Member[]) {
+/** The form’s starting state: the one being edited, a quick-add draft carried over, or a blank expense. */
+function initialState(group: Group, expense: Expense | undefined, people: Member[], draft: QuickDraft | null) {
   const everyone = people.map((member) => member.id);
+  if (!expense && draft) {
+    return {
+      currency: draft.currency,
+      pinned: null,
+      date: draft.date,
+      note: '',
+      amountText: draft.amount ? toInputString(draft.amount, draft.currency) : '',
+      description: draft.description,
+      category: draft.category,
+      paidBy: draft.paidBy,
+      kind: 'equal' as SplitKind,
+      among: draft.among,
+      shares: Object.fromEntries(everyone.map((id) => [id, 1])),
+      exactTexts: Object.fromEntries(everyone.map((id) => [id, ''])),
+    };
+  }
   const split = expense?.split;
   const currency = expense ? (expense.original?.currency ?? group.currency) : likelyCurrency(group);
   return {
@@ -57,7 +75,7 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
   };
 }
 
-function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
+function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?: Expense; draft?: QuickDraft | null }) {
   const theme = useTheme();
   const addExpense = useGroups((state) => state.addExpense);
   const updateExpense = useGroups((state) => state.updateExpense);
@@ -65,7 +83,7 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
   const restoreExpense = useGroups((state) => state.restoreExpense);
   const showToast = useToast((state) => state.show);
   const people = useMemo(() => peopleFor(group, expense), [group, expense]);
-  const start = useMemo(() => initialState(group, expense, people), [group, expense, people]);
+  const start = useMemo(() => initialState(group, expense, people, draft), [group, expense, people, draft]);
   const [amountText, setAmountText] = useState(start.amountText);
   const [description, setDescription] = useState(start.description);
   const [category, setCategory] = useState<CategoryId>(start.category);
@@ -307,6 +325,8 @@ export default function ExpenseScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
   const group = useLastDefined(useGroup(id));
   const expense = useLastDefined(group?.expenses.find((item) => item.id === expenseId));
+  // A draft handed over from quick add, taken once.
+  const [draft] = useState(() => (expenseId ? null : useDraft.getState().take(id)));
   if (!group) {
     return (
       <Screen>
@@ -317,7 +337,7 @@ export default function ExpenseScreen() {
       </Screen>
     );
   }
-  return <ExpenseForm key={expense?.id ?? 'new'} group={group} expense={expense} />;
+  return <ExpenseForm key={expense?.id ?? 'new'} group={group} expense={expense} draft={draft} />;
 }
 
 const styles = StyleSheet.create({

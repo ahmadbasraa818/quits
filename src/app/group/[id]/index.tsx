@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AvatarStack } from '@/components/avatar';
 import { BalanceBars } from '@/components/balance-bars';
@@ -8,6 +8,7 @@ import { Button, IconButton } from '@/components/button';
 import { ExpenseList } from '@/components/expense-list';
 import { Screen, Scroll, TopBar } from '@/components/layout';
 import { Money } from '@/components/money';
+import { QuickAdd } from '@/components/quick-add';
 import { Segmented } from '@/components/segmented';
 import { SettleUp } from '@/components/settle-up';
 import { Text } from '@/components/text';
@@ -31,6 +32,9 @@ export default function GroupScreen() {
   const group = useLastDefined(useGroup(id));
   const summary = useSummary(group);
   const [tab, setTab] = useState<Tab>('expenses');
+  const [quick, setQuick] = useState(false);
+  // Two labelled buttons need about 400 points; below that, quick add is its wand alone.
+  const roomy = useWindowDimensions().width >= 400;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   if (!group || !summary) {
@@ -52,7 +56,14 @@ export default function GroupScreen() {
     <Screen
       footer={
         tab === 'expenses' ? (
-          <Button label="Add expense" icon="plus" testID="add-expense" onPress={() => router.push({ pathname: '/group/[id]/expense', params: { id: group.id } })} />
+          <View style={styles.footer}>
+            <View style={roomy ? styles.quick : null}>
+              <Button label="Quick add" icon="magicWand" variant="secondary" iconOnly={!roomy} testID="quick-add-button" onPress={() => setQuick(true)} />
+            </View>
+            <View style={styles.add}>
+              <Button label="Add expense" icon="plus" testID="add-expense" onPress={() => router.push({ pathname: '/group/[id]/expense', params: { id: group.id } })} />
+            </View>
+          </View>
         ) : null
       }
     >
@@ -83,11 +94,15 @@ export default function GroupScreen() {
           {tab === 'settle' ? <SettleUp group={group} summary={summary} /> : null}
         </View>
       </Scroll>
+      <QuickAdd group={group} visible={quick} onClose={() => setQuick(false)} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  footer: { flexDirection: 'row', gap: space(2) },
+  quick: { flex: 2 },
+  add: { flex: 3 },
   header: { alignItems: 'center', gap: space(1.5), paddingTop: space(2), paddingBottom: space(5) },
   pill: { borderRadius: radius.pill, paddingVertical: space(1.5), paddingHorizontal: space(3.5), marginTop: space(2) },
   tab: { paddingTop: space(2) },

@@ -16,6 +16,7 @@ export function Button({
   disabled = false,
   busy = false,
   compact = false,
+  iconOnly = false,
   accessibilityHint,
   testID,
 }: {
@@ -26,6 +27,8 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   compact?: boolean;
+  /** Just the icon, in a square; the label is still read out. */
+  iconOnly?: boolean;
   accessibilityHint?: string;
   testID?: string;
 }) {
@@ -46,15 +49,18 @@ export function Button({
       style={[
         styles.base,
         compact && styles.compact,
+        iconOnly && styles.iconOnly,
         { backgroundColor: background, opacity: disabled ? 0.45 : 1 },
         variant === 'ghost' && { borderWidth: 1, borderColor: theme.line },
       ]}
     >
       <View style={styles.row}>
-        {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} size={compact ? 18 : 20} color={foreground} /> : null}
-        <Text variant={compact ? 'label' : 'bodyStrong'} style={{ color: foreground }}>
-          {label}
-        </Text>
+        {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} size={compact ? 18 : iconOnly ? 22 : 20} color={foreground} /> : null}
+        {iconOnly ? null : (
+          <Text variant={compact ? 'label' : 'bodyStrong'} style={{ color: foreground }} numberOfLines={1}>
+            {label}
+          </Text>
+        )}
       </View>
     </PressableScale>
   );
@@ -98,6 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compact: { minHeight: 40, paddingHorizontal: space(4), borderRadius: radius.sm },
+  iconOnly: { width: 52, paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   iconButton: { width: 44, height: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
 });

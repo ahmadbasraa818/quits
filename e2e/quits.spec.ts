@@ -336,6 +336,49 @@ test.describe('understanding the money', () => {
   });
 });
 
+test.describe('quick add', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 9, 4, 12));
+  });
+
+  test('adds an expense written as a sentence', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('quick-add-button').click();
+    await page.getByLabel('Describe the expense').fill('Ramen ¥4,800, Aiko paid, split with Ben and me');
+    await expect(page.getByTestId('quick-split')).toHaveText('You, Aiko and Ben · ¥1,600 each');
+    await page.getByTestId('quick-save').click();
+    await expect(page.getByRole('button', { name: /^Ramen, ¥4,800, paid by Aiko, you owe ¥1,600/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByRole('button', { name: /^Ramen, ¥4,800/ })).toHaveCount(0);
+  });
+
+  test('hands what it read to the full form', async ({ page }) => {
+    await page.route('**/api.frankfurter.dev/v1/**', (route) => {
+      const base = new URL(route.request().url()).searchParams.get('base');
+      return route.fulfill({ json: base === 'EUR' ? { date: '2026-10-02', rates: { JPY: 176.99 } } : { date: '2026-10-02', rates: { EUR: 0.00565 } } });
+    });
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('quick-add-button').click();
+    await page.getByLabel('Describe the expense').fill('Museum tickets 30 euros paid by Ben on Friday');
+    await expect(page.getByTestId('quick-amount')).toHaveText('€30.00, which is ¥5,310 at €1 = ¥176.99');
+    await page.getByTestId('quick-form').click();
+    await expect(page.getByRole('heading', { name: 'Add expense' })).toBeVisible();
+    await expect(page.getByTestId('amount')).toHaveValue('30.00');
+    await expect(page.getByRole('button', { name: 'Paid in euros' })).toBeVisible();
+    await expect(page.getByTestId('description')).toHaveValue('Museum tickets');
+    await expect(page.getByRole('radio', { name: 'Ben' }).first()).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('button', { name: 'Date: Friday 2 October 2026' })).toBeVisible();
+  });
+
+  test('won’t add someone who isn’t in the group', async ({ page }) => {
+    await openGroup(page, 'Japan trip');
+    await page.getByTestId('quick-add-button').click();
+    await page.getByLabel('Describe the expense').fill('Dinner with Bob');
+    await expect(page.getByTestId('quick-strangers')).toHaveText('Bob isn’t in Japan trip. Add them in group settings first.');
+    await expect(page.getByTestId('quick-save')).toBeDisabled();
+  });
+});
+
 test('opens a deep link straight to a group', async ({ page }) => {
   await page.goto('group/demo_flat');
   await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
@@ -371,6 +414,10 @@ test.describe('accessibility', () => {
       await scan('conversion');
       await page.getByTestId('date-field').click();
       await scan('date sheet');
+      await page.goto('group/demo_japan');
+      await page.getByTestId('quick-add-button').click();
+      await page.getByLabel('Describe the expense').fill('Ramen ¥4,800, Aiko paid, split with Ben and me');
+      await scan('quick add');
       await page.goto('group/demo_japan/spending');
       await scan('spending');
       await page.goto('group/demo_japan/member/aiko');
