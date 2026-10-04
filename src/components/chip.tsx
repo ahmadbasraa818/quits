@@ -13,6 +13,7 @@ export function Chip({
   onPress,
   leading,
   accessibilityRole = 'radio',
+  accessibilityLabel,
   testID,
 }: {
   label: string;
@@ -20,6 +21,8 @@ export function Chip({
   onPress: () => void;
   leading?: ReactNode;
   accessibilityRole?: 'radio' | 'checkbox';
+  /** When the label alone wouldn't say what the chip is for. */
+  accessibilityLabel?: string;
   testID?: string;
 }) {
   const theme = useTheme();
@@ -30,7 +33,7 @@ export function Chip({
       onPress={onPress}
       accessibilityRole={accessibilityRole}
       aria-checked={selected}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       style={[
         styles.chip,
         { backgroundColor: selected ? theme.brand : theme.card, borderColor: selected ? theme.brand : theme.line },

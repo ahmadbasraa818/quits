@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View
 
 import { Avatar } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
+import { DateField } from '@/components/calendar';
 import { Chip } from '@/components/chip';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
@@ -11,11 +12,13 @@ import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout'
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
+import { useLastDefined } from '@/hooks/use-last-defined';
 import { CATEGORIES, CategoryId } from '@/lib/categories';
 import { daysAgo } from '@/lib/dates';
+import { nameOf as memberName } from '@/lib/members';
 import { CURRENCIES, formatMoney, parseAmount, toInputString } from '@/lib/money';
-import { sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
-import type { Expense, Group } from '@/lib/types';
+import { participantsOf, sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
+import type { Expense, Group, Member } from '@/lib/types';
 import { useGroup, useGroups } from '@/store/groups';
 import { font, radius, space, useTheme } from '@/theme';
 
@@ -25,11 +28,19 @@ const SPLITS = [
   { value: 'exact', label: 'Exact' },
 ] as const;
 
+/** Who the expense can involve: everyone who hasn't left, and anyone already on it. */
+function peopleFor(group: Group, expense: Expense | undefined): Member[] {
+  const involved = new Set(expense ? [expense.paidBy, ...participantsOf(expense.split)] : []);
+  return group.members.filter((member) => !member.left || involved.has(member.id));
+}
+
 /** The form’s starting state: a blank expense, or the one being edited. */
-function initialState(group: Group, expense: Expense | undefined) {
-  const everyone = group.members.map((member) => member.id);
+function initialState(group: Group, expense: Expense | undefined, people: Member[]) {
+  const everyone = people.map((member) => member.id);
   const split = expense?.split;
   return {
+    date: expense?.date ?? daysAgo(0),
+    note: expense?.note ?? '',
     amountText: expense ? toInputString(expense.amount, group.currency) : '',
     description: expense?.description ?? '',
     category: (expense?.category ?? 'food') as CategoryId,
@@ -51,7 +62,8 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
   const removeExpense = useGroups((state) => state.removeExpense);
   const restoreExpense = useGroups((state) => state.restoreExpense);
   const showToast = useToast((state) => state.show);
-  const start = useMemo(() => initialState(group, expense), [group, expense]);
+  const people = useMemo(() => peopleFor(group, expense), [group, expense]);
+  const start = useMemo(() => initialState(group, expense, people), [group, expense, people]);
   const [amountText, setAmountText] = useState(start.amountText);
   const [description, setDescription] = useState(start.description);
   const [category, setCategory] = useState<CategoryId>(start.category);
@@ -60,13 +72,15 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
   const [among, setAmong] = useState<string[]>(start.among);
   const [shares, setShares] = useState<Record<string, number>>(start.shares);
   const [exactTexts, setExactTexts] = useState<Record<string, string>>(start.exactTexts);
+  const [date, setDate] = useState(start.date);
+  const [note, setNote] = useState(start.note);
 
   const { currency } = group;
   const amount = parseAmount(amountText, currency) ?? 0;
   const amountInvalid = amountText.trim() !== '' && parseAmount(amountText, currency) === null;
   const split: Split =
     kind === 'equal'
-      ? { kind, among: group.members.map((member) => member.id).filter((id) => among.includes(id)) }
+      ? { kind, among: people.map((member) => member.id).filter((id) => among.includes(id)) }
       : kind === 'shares'
         ? { kind, shares }
         : { kind, amounts: Object.fromEntries(Object.entries(exactTexts).map(([id, text]) => [id, parseAmount(text, currency) ?? 0])) };
@@ -76,12 +90,12 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
       ? 'Say what it was for.'
       : splitProblem(amount, split, currency);
   const preview = amount > 0 && (kind !== 'exact' || problem === null) ? sharesOf(amount, split) : {};
-  const nameOf = (id: string) => (id === group.me ? 'You' : group.members.find((member) => member.id === id)?.name ?? '');
+  const nameOf = (id: string) => memberName(group, id);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace({ pathname: '/group/[id]', params: { id: group.id } }));
   const save = () => {
     if (problem) return;
-    const data = { description: description.trim(), amount, paidBy, split, category, date: expense?.date ?? daysAgo(0) };
+    const data = { description: description.trim(), amount, paidBy, split, category, date, note: note.trim() || undefined };
     if (expense) updateExpense(group.id, expense.id, data);
     else addExpense(group.id, data);
     showToast(expense ? 'Expense updated' : `Added ${data.description}`);
@@ -113,6 +127,9 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
             />
           </View>
           <Field testID="description" accessibilityLabel="What it was for" value={description} onChangeText={setDescription} placeholder="What was it for?" maxLength={60} returnKeyType="done" />
+          <View style={styles.date}>
+            <DateField value={date} onChange={setDate} />
+          </View>
 
           <SectionLabel>Category</SectionLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Category">
@@ -129,7 +146,7 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
 
           <SectionLabel>Paid by</SectionLabel>
           <View style={styles.wrap} accessibilityRole="radiogroup" accessibilityLabel="Paid by">
-            {group.members.map((member) => (
+            {people.map((member) => (
               <Chip key={member.id} testID={`payer-${member.id}`} label={nameOf(member.id)} selected={paidBy === member.id} onPress={() => setPaidBy(member.id)} leading={<Avatar member={member} size={24} />} />
             ))}
           </View>
@@ -137,7 +154,7 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
           <SectionLabel>Split</SectionLabel>
           <Segmented label="How to split it" options={SPLITS} value={kind} onChange={setKind} />
           <Card style={styles.people}>
-            {group.members.map((member, index) => {
+            {people.map((member, index) => {
               const share = preview[member.id];
               const included = kind === 'equal' ? among.includes(member.id) : kind === 'shares' ? (shares[member.id] ?? 0) > 0 : (parseAmount(exactTexts[member.id] ?? '', currency) ?? 0) > 0;
               return (
@@ -189,6 +206,17 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
               );
             })}
           </Card>
+          <SectionLabel>Note</SectionLabel>
+          <Field
+            testID="note"
+            accessibilityLabel="Note"
+            value={note}
+            onChangeText={setNote}
+            placeholder="Anything worth remembering"
+            multiline
+            maxLength={200}
+            style={styles.note}
+          />
           {problem && (amountText !== '' || description !== '') ? (
             <View style={styles.problem} accessibilityLiveRegion="polite">
               <Icon name="warningCircle" size={18} color={theme.negative} />
@@ -220,8 +248,8 @@ function ExpenseForm({ group, expense }: { group: Group; expense?: Expense }) {
 
 export default function ExpenseScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
-  const group = useGroup(id);
-  const expense = group?.expenses.find((item) => item.id === expenseId);
+  const group = useLastDefined(useGroup(id));
+  const expense = useLastDefined(group?.expenses.find((item) => item.id === expenseId));
   if (!group) {
     return (
       <Screen>
@@ -257,4 +285,6 @@ const styles = StyleSheet.create({
   count: { minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] },
   exact: { width: 120, minHeight: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(2), marginTop: space(3) },
+  date: { marginTop: space(3) },
+  note: { minHeight: 88, textAlignVertical: 'top' },
 });

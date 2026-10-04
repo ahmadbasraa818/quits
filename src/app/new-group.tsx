@@ -4,11 +4,12 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
+import { CurrencyField } from '@/components/currency-picker';
 import { Field } from '@/components/field';
 import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
-import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
-import { CURRENCIES, CURRENCY_CODES, CurrencyCode } from '@/lib/money';
+import { MAX_MEMBERS, namesProblem, tonesFor } from '@/lib/members';
+import type { CurrencyCode } from '@/lib/money';
 import { useGroups } from '@/store/groups';
 import { space } from '@/theme';
 
@@ -19,7 +20,9 @@ export default function NewGroupScreen() {
   const [people, setPeople] = useState<string[]>(['', '']);
 
   const named = people.map((person) => person.trim()).filter(Boolean);
-  const problem = name.trim() === '' ? 'Give the group a name.' : named.length === 0 ? 'Add at least one other person.' : null;
+  const tones = tonesFor(people.length);
+  const problem =
+    name.trim() === '' ? 'Give the group a name.' : named.length === 0 ? 'Add at least one other person.' : namesProblem(named);
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
@@ -44,7 +47,7 @@ export default function NewGroupScreen() {
           <Field testID="group-name" accessibilityLabel="Group name" value={name} onChangeText={setName} placeholder="Lisbon weekend, Flat 2, Five-a-side…" autoFocus maxLength={40} />
 
           <SectionLabel>Currency</SectionLabel>
-          <Segmented label="Currency" value={currency} onChange={setCurrency} options={CURRENCY_CODES.map((code) => ({ value: code, label: `${CURRENCIES[code].symbol} ${code}` }))} />
+          <CurrencyField value={currency} onChange={setCurrency} />
 
           <SectionLabel>People</SectionLabel>
           <View style={styles.people}>
@@ -54,7 +57,7 @@ export default function NewGroupScreen() {
             </View>
             {people.map((person, index) => (
               <View key={index} style={styles.person}>
-                <Avatar member={{ name: person || '?', tone: (index + 1) % 8 }} size={36} />
+                <Avatar member={{ name: person || '?', tone: tones[index] }} size={36} />
                 <Field
                   testID={`person-${index}`}
                   accessibilityLabel={`Person ${index + 2}`}
@@ -69,7 +72,7 @@ export default function NewGroupScreen() {
                 ) : null}
               </View>
             ))}
-            {people.length < 15 ? (
+            {people.length + 1 < MAX_MEMBERS ? (
               <Button variant="ghost" compact icon="userPlus" label="Add someone" onPress={() => setPeople((current) => [...current, ''])} />
             ) : null}
           </View>

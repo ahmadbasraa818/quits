@@ -17,6 +17,10 @@ export type Theme = {
   onBrand: string;
   positive: string;
   negative: string;
+  /** Text on a negative (red) fill. */
+  onNegative: string;
+  /** Behind a sheet or dialog. */
+  scrim: string;
   /** Avatar backgrounds; text on them is ink. */
   tones: string[];
 };
@@ -33,6 +37,8 @@ const light: Theme = {
   onBrand: '#16171A',
   positive: '#0B7A55',
   negative: '#C2352B',
+  onNegative: '#FFFFFF',
+  scrim: 'rgba(22, 23, 26, 0.45)',
   tones: ['#FFD9C8', '#D7E6FF', '#D3F1E1', '#F1DCF8', '#FFEFB8', '#DCE2EE', '#F9D5DF', '#D2EDF1'],
 };
 
@@ -48,6 +54,8 @@ const dark: Theme = {
   onBrand: '#16171A',
   positive: '#43D296',
   negative: '#FF7C70',
+  onNegative: '#16171A',
+  scrim: 'rgba(0, 0, 0, 0.62)',
   tones: ['#5C2F1E', '#23395E', '#1E4A36', '#4A2A58', '#5B4A15', '#2F3647', '#5B2538', '#1F4A51'],
 };
 
