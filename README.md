@@ -28,7 +28,8 @@
 
 ## What it does
 
-- **Groups** for a trip, a flat or a night out, in pounds, euros, dollars or yen.
+- **Groups** for a trip, a flat or a night out, in any of 33 currencies. Rename them, add people, mark who has left, or delete a group and undo it.
+- **Every expense dated and noted:** pick the day from a calendar and add a note, then change anything later.
 - **Split any way:** equally, by shares, or by exact amounts. Every split adds up to the penny.
 - **See where everyone stands:** each balance is a bar either side of zero.
 - **Settle up in the fewest payments.** The demo’s five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair, and the app draws both so you can see the difference.
@@ -54,7 +55,7 @@ It is checked, not just argued. Property tests (fast-check) generate hundreds of
 
 - Money is held as whole minor units (pence, cents, yen), so totals never pick up floating-point error.
 - When a bill won’t divide evenly, the leftover units go to the largest fractional parts, using the largest remainder method. £10 between three people is £3.34, £3.33 and £3.33, never £9.99 or £10.01. Property tests confirm that every split adds up exactly and that no one is ever more than a unit from their fair share.
-- Amounts are parsed from what people type without ever going through floating point, and each currency keeps its own number of decimals: yen has none.
+- Amounts are parsed from what people type without ever going through floating point, and each currency keeps its own number of decimals: yen has none. The decimal comma works too, so “12,50” is twelve fifty and “1,250” is one thousand two hundred and fifty.
 
 ## How it’s built
 
@@ -81,8 +82,8 @@ scripts/        icons, web export, screenshots
 
 ## Quality
 
-- **59 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **22 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create a group and reload; follow a deep link; and run axe accessibility scans of five screens in light and dark mode.
+- **100 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **32 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They add, edit, delete and undo; settle a whole group; create, edit and delete groups; date an expense; follow a deep link; and run axe accessibility scans of nine screens and sheets in light and dark mode.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo.
 
 ## Run it
