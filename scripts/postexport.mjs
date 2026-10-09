@@ -9,9 +9,10 @@ import { join, relative } from 'node:path';
 copyFileSync('dist/index.html', 'dist/404.html');
 // The pages people reach from outside the app get a real copy, so they answer
 // 200 rather than 404: a shared group's link, which messaging apps fetch to
-// show a preview (some skip a 404), and the privacy policy an app store links.
-// Pages serves /quits/import from import.html, with no redirect to a slash.
-const ROUTES = ['import', 'privacy'];
+// show a preview (some skip a 404), the privacy policy an app store links, and
+// the help a support link points to. Pages serves /quits/import from
+// import.html, with no redirect to a slash.
+const ROUTES = ['import', 'privacy', 'help'];
 for (const route of ROUTES) copyFileSync('dist/index.html', `dist/${route}.html`);
 // Expo names some files with a leading underscore, which Jekyll would hide.
 writeFileSync('dist/.nojekyll', '');

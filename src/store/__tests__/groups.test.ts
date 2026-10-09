@@ -2,11 +2,12 @@ import type { Group } from '@/lib/types';
 
 import { useGroups } from '../groups';
 import { summarise } from '../summary';
+import { demoGroups } from '../demo';
 
 const japan = () => useGroups.getState().groups.find((group) => group.id === 'demo_japan')!;
 
 describe('the groups store', () => {
-  beforeEach(() => useGroups.getState().resetDemo());
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
 
   it('starts with the demo groups', () => {
     expect(useGroups.getState().groups.map((group) => group.name)).toEqual(['Japan trip', 'Flat 4B', 'Brighton day trip']);
@@ -88,7 +89,7 @@ describe('the groups store', () => {
 });
 
 describe('editing a group', () => {
-  beforeEach(() => useGroups.getState().resetDemo());
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
   const everyone = (group: Group) => group.members.map((member) => ({ id: member.id, name: member.name, left: member.left }));
 
   it('renames the group and its people', () => {

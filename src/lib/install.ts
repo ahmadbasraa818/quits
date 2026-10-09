@@ -22,6 +22,11 @@ export function listenForInstall() {
   window.addEventListener('appinstalled', () => useInstall.setState({ installed: true, offer: null }));
 }
 
+/** Inside another site's page, such as a portfolio showing the demo: no notes, welcomes or workers there. */
+export function isEmbedded(): boolean {
+  return Platform.OS === 'web' && typeof window !== 'undefined' && window.top !== window.self;
+}
+
 /** On an iPhone or iPad, where Safari installs from its share menu instead of offering. */
 export function isAppleMobile(): boolean {
   return Platform.OS === 'web' && typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -34,7 +39,7 @@ export function isAppleMobile(): boolean {
  * such as a portfolio embedding the demo.
  */
 export function keepForOffline() {
-  if (Platform.OS !== 'web' || __DEV__ || typeof window === 'undefined' || !('serviceWorker' in navigator) || window.top !== window.self) return;
+  if (Platform.OS !== 'web' || __DEV__ || typeof window === 'undefined' || !('serviceWorker' in navigator) || isEmbedded()) return;
   const register = () => navigator.serviceWorker.register('/quits/sw.js', { scope: '/quits/' }).catch(() => {});
   if (document.readyState === 'complete') register();
   else window.addEventListener('load', register);

@@ -37,7 +37,10 @@ type GroupsState = {
   recordPayment: (groupId: string, payment: NewPayment) => string;
   removePayment: (groupId: string, paymentId: string) => Payment | undefined;
   restorePayment: (groupId: string, payment: Payment) => void;
-  resetDemo: () => void;
+  /** Puts the demo groups back as they first were, keeping the person's own. Returns every group as it was, to undo. */
+  resetDemo: () => Group[];
+  /** Removes the demo groups, for someone ready to use Quits for real. Returns every group as it was, to undo. */
+  removeDemo: () => Group[];
   /** A copy of a group from a shared link, with `me` as the person using this device. Returns its id. */
   importGroup: (shared: Group, me: string) => string;
   /** Brings a copy up to date with a newer link, keeping its id and who you are in it. */
@@ -85,6 +88,13 @@ export function applyGroupEdit(group: Group, edit: GroupEdit, now = Date.now()):
 
 const isShape = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** One of the demo groups that come with Quits, rather than the person's own. */
+export const isDemo = (group: Pick<Group, 'id'>) => group.id.startsWith('demo_');
+
+// Whether this device had saved groups when Quits opened: a returning person, not a new one.
+let savedBefore = false;
+export const hadSavedGroups = () => savedBefore;
+
 /**
  * The store's storage: JSON kept by safeStorage. Saved data that isn't a
  * readable save of Quits is set aside under its own key rather than written
@@ -93,6 +103,7 @@ const isShape = (value: unknown): value is Record<string, unknown> => typeof val
 const groupsStorage: PersistStorage<Persisted> = {
   getItem: async (name) => {
     const raw = await safeStorage.getItem(name);
+    savedBefore = raw !== null;
     if (raw === null) return null;
     try {
       const value: unknown = JSON.parse(raw);
@@ -242,7 +253,17 @@ export const useGroups = create<GroupsState>()(
           })),
         }),
 
-      resetDemo: () => set({ groups: demoGroups() }),
+      resetDemo: () => {
+        const before = get().groups;
+        set({ groups: [...before.filter((group) => !isDemo(group)), ...demoGroups()] });
+        return before;
+      },
+
+      removeDemo: () => {
+        const before = get().groups;
+        set({ groups: before.filter((group) => !isDemo(group)) });
+        return before;
+      },
 
       importGroup: (shared, me) => {
         const id = createId('g');

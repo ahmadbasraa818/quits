@@ -5,6 +5,8 @@ import { Button, IconButton } from '@/components/button';
 import { GroupCard, openGroup, Overview, useSplitView } from '@/components/group-list';
 import { Icon, IconName } from '@/components/icon';
 import { Notices } from '@/components/notices';
+import { useShortcuts } from '@/components/shortcuts';
+import { WelcomeCard } from '@/components/welcome-card';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useGroups } from '@/store/groups';
@@ -51,6 +53,7 @@ function Welcome() {
         <View style={styles.actions}>
           {hasDemo ? <Button label="Open the Japan trip" icon="arrowRight" onPress={() => openGroup('demo_japan', true)} testID="open-demo" /> : null}
           <Button label="New group" icon="plus" variant="secondary" onPress={() => router.push('/new-group')} testID="new-group" />
+          <Button label="Help" icon="question" variant="ghost" onPress={() => router.push('/help')} testID="open-help" />
         </View>
       </Scroll>
     </Screen>
@@ -60,10 +63,20 @@ function Welcome() {
 export default function GroupsScreen() {
   const groups = useGroups((state) => state.groups);
   const split = useSplitView();
+  // On a computer, N starts a group from here.
+  const newGroup = () => router.push('/new-group');
+  useShortcuts({ n: newGroup, N: newGroup });
   if (split) return <Welcome />;
   return (
     <Screen footer={<Button label="New group" icon="plus" onPress={() => router.push('/new-group')} testID="new-group" />}>
-      <TopBar trailing={<IconButton icon="info" label="About Quits" onPress={() => router.push('/about')} />} />
+      <TopBar
+        trailing={
+          <>
+            <IconButton icon="question" label="Help" testID="open-help" onPress={() => router.push('/help')} />
+            <IconButton icon="info" label="About Quits" onPress={() => router.push('/about')} />
+          </>
+        }
+      />
       <Scroll>
         <Text variant="display" accessibilityRole="header">
           Quits
@@ -72,6 +85,7 @@ export default function GroupsScreen() {
           Split costs with friends. Settle up in the fewest payments.
         </Text>
         <Notices />
+        <WelcomeCard />
         <Overview groups={groups} />
         <SectionLabel>Groups</SectionLabel>
         <View style={styles.list}>

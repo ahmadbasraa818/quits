@@ -6,6 +6,7 @@ import { summarise } from '@/store/summary';
 
 import { SettleUp } from '../settle-up';
 import { ToastHost } from '../toast';
+import { demoGroups } from '@/store/demo';
 
 const japan = () => useGroups.getState().groups.find((group) => group.id === 'demo_japan')!;
 
@@ -21,7 +22,7 @@ function Settle() {
 
 describe('SettleUp', () => {
   beforeEach(async () => {
-    await act(async () => useGroups.getState().resetDemo());
+    await act(async () => useGroups.getState().replaceAll(demoGroups()));
   });
 
   it('explains why the plan is as short as it is', async () => {

@@ -24,6 +24,7 @@ import { SettleGraph } from './settle-graph';
 import { shareText } from './share';
 import { Text } from './text';
 import { useToast } from './toast';
+import { HelpLink } from './help-link';
 
 const memberOf = (group: Group, id: string): Member => group.members.find((member) => member.id === id) ?? { id, name: '?', tone: 0 };
 
@@ -132,9 +133,12 @@ export function SettleUp({ group, summary }: { group: Group; summary: GroupSumma
   return (
     <View style={{ gap: space(4) }}>
       <View style={{ gap: space(1) }}>
-        <Text variant="title" testID="settle-headline">
-          {count === 1 ? 'One payment settles everyone' : `${count} payments settle everyone`}
-        </Text>
+        <View style={styles.headline}>
+          <Text variant="title" testID="settle-headline" style={styles.headlineText}>
+            {count === 1 ? 'One payment settles everyone' : `${count} payments settle everyone`}
+          </Text>
+          <HelpLink id="fewest" />
+        </View>
         {summary.directCount > count ? (
           <Text variant="body" tone="muted">
             Paying back pair by pair would take {summary.directCount}.
@@ -218,6 +222,8 @@ export function SettleUp({ group, summary }: { group: Group; summary: GroupSumma
 }
 
 const styles = StyleSheet.create({
+  headline: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2) },
+  headlineText: { flex: 1 },
   rows: { gap: space(2) },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3) },
   transferPeople: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space(1.5) },

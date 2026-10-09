@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { localDate } from '@/lib/dates';
+import { isEmbedded } from '@/lib/install';
 import { toBackup } from '@/store/backup';
 import { useGroups } from '@/store/groups';
 import { forgetSetAside, useRecovery } from '@/store/recovery';
@@ -16,9 +17,6 @@ import { useToast } from './toast';
 
 /** “a”, “a and b”, “a, b and c”. */
 const listOf = (items: string[]) => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
-
-/** Inside another site's page, such as a portfolio showing the demo, where a blocked store is expected. */
-const embedded = () => Platform.OS === 'web' && typeof window !== 'undefined' && window.top !== window.self;
 
 function Notice({ title, body, children, testID }: { title: string; body: string; children: React.ReactNode; testID: string }) {
   const theme = useTheme();
@@ -54,7 +52,8 @@ export function Notices() {
       () => showToast('That couldn’t be saved')
     );
 
-  if (setAside.length === 0 && (!notSaving || embedded())) return null;
+  // Inside another site's page, a blocked store is expected, so it isn't mentioned.
+  if (setAside.length === 0 && (!notSaving || isEmbedded())) return null;
   return (
     <View style={styles.list}>
       {setAside.length > 0 ? (
@@ -67,7 +66,7 @@ export function Notices() {
           <Button compact label="Delete it" icon="trash" variant="ghost" testID="delete-set-aside" onPress={() => setDeleting(true)} />
         </Notice>
       ) : null}
-      {notSaving && !embedded() ? (
+      {notSaving && !isEmbedded() ? (
         <Notice testID="notice-not-saving" title="This browser isn’t saving your changes" body="They’ll last until you close Quits. Save a backup to keep them, or allow this site to store data.">
           <Button compact label="Save a backup" icon="downloadSimple" variant="secondary" testID="save-not-saving" onPress={() => save(`quits-backup-${today}.json`, toBackup(groups), 'Saved a backup to a file')} />
         </Notice>

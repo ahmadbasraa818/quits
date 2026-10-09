@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, type TextInput, useWindowDimensions, View } from 'react-native';
 
 import { AvatarStack } from '@/components/avatar';
 import { BalanceBars } from '@/components/balance-bars';
@@ -13,6 +13,7 @@ import { QuickAdd } from '@/components/quick-add';
 import { Segmented } from '@/components/segmented';
 import { SettleUp } from '@/components/settle-up';
 import { ShareCopy } from '@/components/share-copy';
+import { useShortcuts } from '@/components/shortcuts';
 import { Text } from '@/components/text';
 import { useLastDefined } from '@/hooks/use-last-defined';
 import { formatMoney } from '@/lib/money';
@@ -30,16 +31,34 @@ const TABS = [
 
 export default function GroupScreen() {
   const theme = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // A link can open the group on a tab, or with quick add or sharing already open: help's "Show me" does.
+  const { id, tab: linkedTab, open } = useLocalSearchParams<{ id: string; tab?: string; open?: string }>();
   const group = useLastDefined(useGroup(id));
   const summary = useSummary(group);
-  const [tab, setTab] = useState<Tab>('expenses');
-  const [quick, setQuick] = useState(false);
-  const [sharing, setSharing] = useState(false);
+  const [tab, setTab] = useState<Tab>(() => (TABS.some((item) => item.value === linkedTab) ? (linkedTab as Tab) : 'expenses'));
+  const [quick, setQuick] = useState(open === 'quick');
+  const [sharing, setSharing] = useState(open === 'share');
   const split = useSplitView();
   // Two labelled buttons need about 400 points; below that, quick add is its wand alone.
   const roomy = useWindowDimensions().width >= 400;
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const searchRef = useRef<TextInput>(null);
+  // On a computer: N adds an expense, Q is quick add, / searches. Not while a sheet is open over the group.
+  const free = Boolean(group) && !quick && !sharing;
+  const addExpense = () => free && group && router.push({ pathname: '/group/[id]/expense', params: { id: group.id } });
+  const openQuick = () => free && setQuick(true);
+  useShortcuts({
+    n: addExpense,
+    N: addExpense,
+    q: openQuick,
+    Q: openQuick,
+    '/': () => {
+      if (!free) return;
+      setTab('expenses');
+      // The list may only now be showing, so focus once it has drawn.
+      requestAnimationFrame(() => searchRef.current?.focus());
+    },
+  });
 
   if (!group || !summary) {
     return (
@@ -97,7 +116,7 @@ export default function GroupScreen() {
         </View>
         <Segmented label="Group sections" options={TABS} value={tab} onChange={setTab} />
         <View style={styles.tab}>
-          {tab === 'expenses' ? <ExpenseList group={group} /> : null}
+          {tab === 'expenses' ? <ExpenseList group={group} searchRef={searchRef} /> : null}
           {tab === 'balances' ? <BalanceBars group={group} balance={summary.balance} /> : null}
           {tab === 'settle' ? <SettleUp group={group} summary={summary} /> : null}
         </View>
