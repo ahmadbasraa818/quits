@@ -15,6 +15,15 @@ export type Release = { version: string; title: string; items: { icon: IconName;
 /** What each release brought, newest first. The newest is always the app's own version. */
 export const RELEASES: Release[] = [
   {
+    version: '2.3.0',
+    title: 'Regular bills, tidy groups',
+    items: [
+      { icon: 'repeat', text: 'Expenses that repeat weekly, monthly or yearly, like rent or a subscription, added by themselves when they come due.' },
+      { icon: 'archive', text: 'Archive a group that’s finished: it moves out of your list and totals, with everything kept.' },
+      { icon: 'fileCsv', text: 'Export a group as a spreadsheet, with what every expense and payment did to everyone’s balance.' },
+    ],
+  },
+  {
     version: '2.2.0',
     title: 'Paid back sooner',
     items: [

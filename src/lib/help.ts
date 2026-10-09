@@ -6,7 +6,7 @@ import type { Group } from './types';
 /** Where a help answer's "Show me" goes: a screen, or a screen of a group. */
 export type HelpTarget =
   | { kind: 'route'; href: '/new-group' | '/about' | '/privacy' }
-  | { kind: 'group'; screen: 'expense' | 'items' | 'quick' | 'balances' | 'settle' | 'share' | 'spending' | 'statement' | 'pay' };
+  | { kind: 'group'; screen: 'expense' | 'items' | 'quick' | 'balances' | 'settle' | 'share' | 'spending' | 'statement' | 'pay' | 'settings' };
 
 export const TOPICS = [
   { id: 'start', title: 'Getting started' },
@@ -40,6 +40,17 @@ const ENTRIES = [
     ],
     keywords: ['new', 'create', 'trip', 'flat', 'friends', 'people'],
     show: { label: 'Start a group', target: { kind: 'route', href: '/new-group' } },
+  },
+  {
+    id: 'archive',
+    topic: 'start',
+    question: 'How do I put away a group that’s finished?',
+    answer: [
+      'In the group’s settings, choose Archive group. It moves under Archived at the bottom of your groups and out of the totals, with everything in it kept.',
+      'Open it from there and choose Bring back to return it to your groups.',
+    ],
+    keywords: ['archive', 'hide', 'finished', 'done', 'old', 'tidy', 'put away'],
+    show: { label: 'Open group settings', target: { kind: 'group', screen: 'settings' } },
   },
   {
     id: 'demo',
@@ -126,6 +137,17 @@ const ENTRIES = [
     ],
     keywords: ['items', 'receipt', 'restaurant', 'dinner', 'tip', 'service', 'tax'],
     show: { label: 'Split a bill by item', target: { kind: 'group', screen: 'items' } },
+  },
+  {
+    id: 'repeat',
+    topic: 'adding',
+    question: 'Can an expense repeat, like rent?',
+    answer: [
+      'Yes. When you add it, choose how often it repeats: weekly, monthly or yearly. On the day the next one is due, Quits adds it, with the same amount and split, and that one carries the schedule on. A monthly one on the 31st comes back on the last day of a shorter month.',
+      'To stop it, open the newest one and choose Never. If Quits hasn’t been opened for a while, it adds everything that came due when it next is, up to 60 at a time. One paid in another currency keeps the rate it was saved at.',
+    ],
+    keywords: ['repeat', 'recurring', 'monthly', 'weekly', 'yearly', 'rent', 'subscription', 'bills', 'regular'],
+    show: { label: 'Add an expense', target: { kind: 'group', screen: 'expense' } },
   },
   {
     id: 'sums',
@@ -224,6 +246,17 @@ const ENTRIES = [
     question: 'Do shared copies stay in step?',
     answer: ['No: each copy is its own. To bring a friend up to date, share the group again. Opening a newer link offers to update their copy rather than add a second one.'],
     keywords: ['sync', 'update', 'copy', 'together', 'live'],
+  },
+  {
+    id: 'csv',
+    topic: 'data',
+    question: 'Can I get a group into a spreadsheet?',
+    answer: [
+      'In the group’s settings, choose Export as a spreadsheet. Quits saves a CSV file with every expense and payment, oldest first, and a column for each person with what each one did to their balance. The last row adds those up to where everyone stands.',
+      'It opens in Excel, Numbers or Google Sheets.',
+    ],
+    keywords: ['csv', 'excel', 'spreadsheet', 'export', 'sheets', 'numbers', 'download', 'accounts'],
+    show: { label: 'Open group settings', target: { kind: 'group', screen: 'settings' } },
   },
   {
     id: 'backup',
@@ -334,5 +367,7 @@ export function hrefFor(target: HelpTarget, groups: Group[]): Href | null {
     }
     case 'pay':
       return { pathname: '/group/[id]/member/[memberId]', params: { id, memberId: group.me, pay: 'add' } };
+    case 'settings':
+      return { pathname: '/group/[id]/settings', params: { id } };
   }
 }

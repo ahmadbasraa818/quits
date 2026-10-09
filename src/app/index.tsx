@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, IconButton } from '@/components/button';
-import { GroupCard, openGroup, Overview, useSplitView } from '@/components/group-list';
+import { ArchivedGroups, GroupCard, openGroup, Overview, splitArchived, useSplitView } from '@/components/group-list';
 import { Icon, IconName } from '@/components/icon';
 import { Notices } from '@/components/notices';
 import { useShortcuts } from '@/components/shortcuts';
@@ -61,7 +61,7 @@ function Welcome() {
 }
 
 export default function GroupsScreen() {
-  const groups = useGroups((state) => state.groups);
+  const { active, archived } = splitArchived(useGroups((state) => state.groups));
   const split = useSplitView();
   // On a computer, N starts a group from here.
   const newGroup = () => router.push('/new-group');
@@ -86,17 +86,18 @@ export default function GroupsScreen() {
         </Text>
         <Notices />
         <WelcomeCard />
-        <Overview groups={groups} />
+        <Overview groups={active} />
         <SectionLabel>Groups</SectionLabel>
         <View style={styles.list}>
-          {groups.length === 0 ? (
+          {active.length === 0 ? (
             <Text variant="body" tone="muted">
-              No groups yet. Start one for a trip, a flat or a night out.
+              {archived.length > 0 ? 'Every group is archived. Start a new one for a trip, a flat or a night out.' : 'No groups yet. Start one for a trip, a flat or a night out.'}
             </Text>
           ) : (
-            groups.map((group, index) => <GroupCard key={group.id} group={group} index={index} />)
+            active.map((group, index) => <GroupCard key={group.id} group={group} index={index} />)
           )}
         </View>
+        <ArchivedGroups groups={archived} />
       </Scroll>
     </Screen>
   );

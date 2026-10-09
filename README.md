@@ -35,7 +35,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 369 unit, property and component tests and 100 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 404 unit, property and component tests and 106 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -46,6 +46,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Sums in any amount field:** “4800÷3” is ¥1,600, worked out exactly, with + − × ÷ keys for phones.
 - **Any of 33 currencies:** each expense can be in its own currency, converted at the ECB's rate for its date or at a rate you type, fixed when you save it.
 - **Dated and noted:** pick the day from a calendar and add a note, change anything later, and undo a delete.
+- **Bills that come back:** rent, a subscription or a weekly shop can repeat every week, month or year. Quits adds each one on the day it's due, even after time away, and a monthly bill on the 31st comes back on the last day of a shorter month.
 
 **Settle up**
 
@@ -66,9 +67,10 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 
 - **Share a copy by link.** Friends open their own copy and pick which person they are. Share again to send an update.
 - **Back up every group to a file** and restore it on any device: a download on the web, the share sheet on a phone.
+- **Export a group as a spreadsheet:** a CSV file of every expense and payment, with a column per person for what each did to their balance, adding up to where everyone stands.
 - **Safe by default.** Saved data Quits can't read is set aside, never written over; a browser that won't save says so and offers a backup; and if a screen ever breaks, it offers a way out instead of a blank page.
 - **Private by design**, with no account, server, analytics or tracking. The [privacy page](https://ahmadbasraa818.github.io/quits/privacy) says exactly when anything leaves the device.
-- **Groups for anything:** rename them, add people, mark who has left, or delete a group and undo it. The demo groups can be reset, or cleared away when you're ready, without touching your own.
+- **Groups for anything:** rename them, add people, mark who has left, archive a finished one out of the list and totals, or delete one and undo it. The demo groups can be reset, or cleared away when you're ready, without touching your own.
 
 **Help when you need it**
 
@@ -258,7 +260,8 @@ src/
                 import, help, about and privacy
   components/   sheets, charts, the settle-up graph, the item editor, quick add, pay links, toasts, haptics
   lib/          the logic, with no React in it: money, splits, balances, settling up, conversion,
-                quick add, sums, share links, pay links, help, validation and the graph's layout
+                quick add, sums, share links, pay links, repeats, spreadsheets, help, validation
+                and the graph's layout
   store/        the persisted store, settings, migrations, backups, the demo data and cached rates
   theme/        colours for light and dark, type and spacing
 e2e/            Playwright tests against the web build
@@ -267,8 +270,8 @@ scripts/        icons, the web export and its service worker, screenshots
 
 ## Quality
 
-- **369 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **100 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **404 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **106 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;
@@ -280,7 +283,8 @@ scripts/        icons, the web export and its service worker, screenshots
   - search the help and follow an answer to the right screen, open an answer from a “?”, welcome someone new, tell someone back after an update what's new once, and drive a group from the keyboard;
   - reset or remove the demo groups while keeping the person's own;
   - add how someone gets paid from a pasted link, and pay them with the amount filled in; remind someone with the link to pay you, remembered after a reload; and pay from a friend's copy of a shared group;
-  - and run axe accessibility scans of twenty-one screens and sheets in light and dark mode.
+  - start a monthly expense, move the browser's clock two months on, and find the two that came due; archive a group and bring it back; export a group and check its balance row;
+  - and run axe accessibility scans of twenty-three screens and sheets in light and dark mode.
 - **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 

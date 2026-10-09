@@ -19,7 +19,7 @@ import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
 import { isSum, readAmount } from '@/lib/calc';
 import { CATEGORIES, CategoryId } from '@/lib/categories';
-import { daysAgo } from '@/lib/dates';
+import { dayLabel, daysAgo } from '@/lib/dates';
 import { likelyCurrency, peopleFor } from '@/lib/expenses';
 import { convert } from '@/lib/fx';
 import { nameOf as memberName } from '@/lib/members';
@@ -27,6 +27,7 @@ import { createId } from '@/lib/ids';
 import { CURRENCIES, CurrencyCode, formatMoney, MAX_AMOUNT, toInputString } from '@/lib/money';
 import { itemsTotal, sharesOf, Split, SplitKind, splitProblem } from '@/lib/split';
 import type { QuickDraft } from '@/lib/quick-add';
+import { nextDate, repeatFrom, type RepeatEvery } from '@/lib/repeat';
 import type { Expense, Group, Member } from '@/lib/types';
 import { useDraft } from '@/store/draft';
 import { useGroup, useGroups } from '@/store/groups';
@@ -67,6 +68,7 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
       exactTexts: Object.fromEntries(everyone.map((id) => [id, ''])),
       items: [] as ItemDraft[],
       extrasText: '',
+      repeats: 'never' as Repeats,
     };
   }
   const split = expense?.split;
@@ -92,8 +94,17 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
         ? split.items.map((item): ItemDraft => ({ key: item.id, label: item.label, amountText: toInputString(item.amount, currency), among: item.among }))
         : ([] as ItemDraft[]),
     extrasText: split?.kind === 'items' && split.extras > 0 ? toInputString(split.extras, currency) : '',
+    repeats: (expense?.repeat?.every ?? 'never') as Repeats,
   };
 }
+
+type Repeats = 'never' | RepeatEvery;
+const REPEATS: { value: Repeats; label: string }[] = [
+  { value: 'never', label: 'Never' },
+  { value: 'week', label: 'Weekly' },
+  { value: 'month', label: 'Monthly' },
+  { value: 'year', label: 'Yearly' },
+];
 
 function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { group: Group; expense?: Expense; draft?: QuickDraft | null; linkedKind?: SplitKind | null }) {
   const theme = useTheme();
@@ -119,6 +130,11 @@ function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { grou
   const [picking, setPicking] = useState(false);
   const [items, setItems] = useState<ItemDraft[]>(start.items);
   const [extrasText, setExtrasText] = useState(start.extrasText);
+  const [repeats, setRepeats] = useState<Repeats>(start.repeats);
+  const catchUpRepeats = useGroups((state) => state.catchUpRepeats);
+  // A schedule starts on a new expense, or changes on one that already has it. An older one in a series
+  // would start a second schedule and add its expenses twice.
+  const canRepeat = !expense || expense.repeat !== undefined;
   const amountField = useRef<TextInput>(null);
 
   // Paid in another currency: the ECB's rate for the day, unless one is pinned.
@@ -182,11 +198,15 @@ function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { grou
   const save = () => {
     if (problem) return;
     const original = foreign && rate ? { amount, currency, rate } : undefined;
-    const data = { description: description.trim(), amount: converted ?? 0, original, paidBy, split, category, date, note: note.trim() || undefined };
+    const repeat = repeats === 'never' ? undefined : repeatFrom(repeats, date);
+    const data = { description: description.trim(), amount: converted ?? 0, original, paidBy, split, category, date, note: note.trim() || undefined, repeat };
     if (expense) updateExpense(group.id, expense.id, data);
     else addExpense(group.id, data);
+    // Started in the past, a schedule may already have more due.
+    const caughtUp = repeat ? catchUpRepeats() : 0;
     success();
-    showToast(expense ? 'Expense updated' : `Added ${data.description}`);
+    const since = caughtUp === 0 ? '' : caughtUp === 1 ? ', and the one due since' : `, and the ${caughtUp} due since`;
+    showToast(`${expense ? 'Expense updated' : `Added ${data.description}`}${since}`);
     close();
   };
 
@@ -371,6 +391,17 @@ function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { grou
               );
             })}
           </Card>
+          {canRepeat ? (
+            <>
+              <SectionLabel help="repeat">Repeats</SectionLabel>
+              <Segmented label="How often it repeats" options={REPEATS} value={repeats} onChange={setRepeats} />
+              {repeats !== 'never' ? (
+                <Text variant="caption" tone="muted" style={styles.repeatNote} testID="repeat-note">
+                  The next is added on {dayLabel(nextDate(date, repeatFrom(repeats, date)))}, then every {repeats} after.
+                </Text>
+              ) : null}
+            </>
+          ) : null}
           <SectionLabel>Note</SectionLabel>
           <Field
             testID="note"
@@ -474,4 +505,5 @@ const styles = StyleSheet.create({
   sum: { textAlign: 'center', fontVariant: ['tabular-nums'] },
   date: { marginTop: space(3) },
   note: { minHeight: 88, textAlignVertical: 'top' },
+  repeatNote: { marginTop: space(2) },
 });

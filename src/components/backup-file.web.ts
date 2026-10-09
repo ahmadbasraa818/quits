@@ -1,8 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 
-/** Downloads the backup as a file. */
-export async function saveBackupFile(name: string, text: string): Promise<void> {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+const TYPES = { json: 'application/json', csv: 'text/csv;charset=utf-8' } as const;
+
+export type FileKind = keyof typeof TYPES;
+
+/** Downloads text as a file. */
+export async function saveTextFile(name: string, text: string, kind: FileKind): Promise<void> {
+  const url = URL.createObjectURL(new Blob([text], { type: TYPES[kind] }));
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
@@ -11,6 +15,9 @@ export async function saveBackupFile(name: string, text: string): Promise<void> 
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** Downloads the backup as a file. */
+export const saveBackupFile = (name: string, text: string) => saveTextFile(name, text, 'json');
 
 /** Asks for a backup file and reads it, or null if none was chosen. */
 export async function pickBackupFile(): Promise<string | null> {

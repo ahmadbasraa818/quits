@@ -6,7 +6,7 @@ import { useGroups } from '@/store/groups';
 import { font, space, useTheme } from '@/theme';
 
 import { Button, IconButton } from './button';
-import { GroupCard, Overview } from './group-list';
+import { ArchivedGroups, GroupCard, Overview, splitArchived } from './group-list';
 import { SectionLabel } from './layout';
 import { Text } from './text';
 
@@ -14,7 +14,7 @@ import { Text } from './text';
 export function Sidebar() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const groups = useGroups((state) => state.groups);
+  const { active, archived } = splitArchived(useGroups((state) => state.groups));
   const selected = /^\/group\/([^/]+)/.exec(usePathname())?.[1];
   return (
     <View role="navigation" aria-label="Your groups" style={[styles.sidebar, { borderRightColor: theme.line, paddingTop: insets.top }]} testID="sidebar">
@@ -26,13 +26,14 @@ export function Sidebar() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.list}>
-        <Overview groups={groups} />
+        <Overview groups={active} />
         <SectionLabel>Groups</SectionLabel>
         <View style={{ gap: space(3) }}>
-          {groups.map((group, index) => (
+          {active.map((group, index) => (
             <GroupCard key={group.id} group={group} index={index} selected={group.id === selected} split />
           ))}
         </View>
+        <ArchivedGroups groups={archived} split selected={selected} />
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, space(4)) }]}>
         <Button label="New group" icon="plus" onPress={() => router.push('/new-group')} testID="new-group-sidebar" />

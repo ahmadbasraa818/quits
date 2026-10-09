@@ -65,6 +65,11 @@ describe('checking a group from outside', () => {
     for (const group of groups) expect(validateGroup(group)).toBe(group);
   });
 
+  it('accepts repeats and archiving', () => {
+    const kept = { ...japan, archived: true, expenses: japan.expenses.map((expense, index) => (index === 0 ? { ...expense, repeat: { every: 'month' as const, day: 31 } } : expense)) };
+    expect(validateGroup(kept)).toBe(kept);
+  });
+
   it('accepts how people get paid, and shares it', () => {
     const paid = withPay(japan, [
       { kind: 'paypal', handle: 'bensmith' },
@@ -91,6 +96,9 @@ describe('checking a group from outside', () => {
     ['a username with a path in it', (group) => withPay(group, [{ kind: 'paypal', handle: 'ben/../../evil' }])],
     ['a service Quits doesn’t know', (group) => withPay(group, [{ kind: 'bitcoin', handle: 'ben' }])],
     ['more ways to pay than anyone needs', (group) => withPay(group, ['a', 'b', 'c', 'd'].map((handle) => ({ kind: 'paypal', handle })))],
+    ['a repeat with no schedule Quits knows', (group) => ({ ...group, expenses: [{ ...group.expenses[0], repeat: { every: 'fortnight' } }] })],
+    ['a repeat on the 32nd', (group) => ({ ...group, expenses: [{ ...group.expenses[0], repeat: { every: 'month', day: 32 } }] })],
+    ['archived as a word', (group) => ({ ...group, archived: 'yes' })],
   ];
   it.each(broken)('turns away a group with %s', (_, breakIt) => {
     expect(validateGroup(breakIt(japan))).toBeNull();

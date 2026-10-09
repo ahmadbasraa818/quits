@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, type ErrorBoundaryProps, router, Stack, ThemeP
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { CrashScreen } from '@/components/crash-screen';
@@ -11,9 +11,9 @@ import { useSplitView } from '@/components/group-list';
 import { useGlobalShortcuts } from '@/components/shortcuts';
 import { RELEASES, WhatsNewOnUpdate } from '@/components/whats-new';
 import { Sidebar } from '@/components/sidebar';
-import { ToastHost } from '@/components/toast';
+import { ToastHost, useToast } from '@/components/toast';
 import { keepForOffline, listenForInstall } from '@/lib/install';
-import { hadSavedGroups, useHydrated } from '@/store/groups';
+import { hadSavedGroups, useGroups, useHydrated } from '@/store/groups';
 import { loadSetAside } from '@/store/recovery';
 import { settleFirstRun, useSettingsHydrated } from '@/store/settings';
 import { useTheme } from '@/theme';
@@ -42,6 +42,20 @@ export default function RootLayout() {
   const ready = (fontsLoaded || fontError !== null) && hydrated && settingsLoaded;
   // On a computer, ? opens help from anywhere.
   useGlobalShortcuts({ '?': () => pathname !== '/help' && router.push('/help') });
+
+  // Repeating expenses that came due while Quits was closed or in the background are added when it's back.
+  useEffect(() => {
+    if (!ready) return undefined;
+    const catchUp = () => {
+      const added = useGroups.getState().catchUpRepeats();
+      if (added > 0) useToast.getState().show(added === 1 ? 'Added a repeating expense that came due' : `Added ${added} repeating expenses that came due`);
+    };
+    catchUp();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') catchUp();
+    });
+    return () => subscription.remove();
+  }, [ready]);
 
   useEffect(() => {
     if (!ready) return;
