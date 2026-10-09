@@ -24,6 +24,20 @@ const seedGroups = (page: Page, groups: unknown[]) =>
     [JSON.stringify({ state: { groups }, version: 3 }), JSON.stringify({ state: { welcomeDone: true, seenVersion: app.expo.version }, version: 0 })]
   );
 
+/** Keeps the text of every file the app offers to save, to read back with `savedFile`. */
+const captureSavedFiles = (page: Page) =>
+  page.addInitScript(() => {
+    const saved: string[] = ((window as unknown as { saved: string[] }).saved = []);
+    const original = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (blob: Blob | MediaSource) => {
+      if (blob instanceof Blob) blob.text().then((text) => saved.push(text));
+      return original(blob);
+    };
+  });
+
+/** The text of the first file saved, once it has arrived. */
+const savedFile = async (page: Page) => (await page.waitForFunction(() => (window as unknown as { saved: string[] }).saved[0])).jsonValue();
+
 /** Pay links open the service's own site; tests get a stand-in, so nothing reaches it. */
 const PAY_SITES = /^https:\/\/(paypal|monzo|revolut)\.me\//;
 const standIn = { contentType: 'text/html', body: '<title>Pay</title>' };
@@ -710,6 +724,61 @@ test.describe('getting paid', () => {
   });
 });
 
+test.describe('regular bills and tidy groups', () => {
+  test('adds a repeating expense each time it comes due', async ({ page }) => {
+    await page.goto('group/demo_flat');
+    await page.getByTestId('add-expense').click();
+    await page.getByTestId('amount').fill('30');
+    await page.getByTestId('description').fill('Cleaner');
+    await tab(page, 'Monthly').click();
+    await expect(page.getByTestId('repeat-note')).toContainText('then every month after.');
+    await page.getByTestId('save-expense').click();
+    await expect(page.getByRole('button', { name: /^Cleaner, £30\.00, paid by You, you lent £20\.00, repeats every month$/ })).toBeVisible();
+
+    // Two months and a few days on, the two that came due are there when Quits opens.
+    const later = new Date();
+    later.setMonth(later.getMonth() + 2);
+    later.setDate(later.getDate() + 3);
+    await page.clock.setFixedTime(later);
+    await page.reload();
+    await expect(page.getByText(/^Added \d+ repeating expenses that came due$/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Cleaner, £30\.00/ })).toHaveCount(3);
+    await expect(page.getByRole('button', { name: /^Cleaner, .*repeats every month$/ })).toHaveCount(1);
+  });
+
+  test('archives a group, out of the list and the totals, and brings it back', async ({ page }) => {
+    await page.goto('group/demo_japan/settings');
+    await expect(page.getByTestId('archive-note')).toHaveText(/^There are still payments to settle\./);
+    await page.getByTestId('archive-group').click();
+    await expect(page.getByText('Archived Japan trip')).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Archived groups, 1' })).toBeVisible();
+    await expect(page.getByText('¥46,134')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Japan trip\./ })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Archived groups, 1' }).click();
+    await page.getByRole('button', { name: /^Japan trip\./ }).click();
+    await expect(page.getByTestId('archived-banner')).toBeVisible();
+    await page.getByTestId('unarchive-banner').click();
+    await expect(page.getByTestId('archived-banner')).toHaveCount(0);
+    await page.goto('./');
+    await expect(page.getByText('¥46,134').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Archived groups/ })).toHaveCount(0);
+  });
+
+  test('exports a group as a spreadsheet', async ({ page }) => {
+    await captureSavedFiles(page);
+    await page.goto('group/demo_brighton/settings');
+    const download = page.waitForEvent('download');
+    await page.getByTestId('export-csv').click();
+    expect((await download).suggestedFilename()).toMatch(/^quits-brighton-day-trip-\d{4}-\d{2}-\d{2}\.csv$/);
+    const rows = (await savedFile(page)).replace(/^\uFEFF/, '').trimEnd().split('\r\n');
+    expect(rows[0]).toBe('Date,Type,Description,Category,Paid by,Amount (GBP),Paid in,Currency paid in,Rate,You,Mia,Tom,Note');
+    expect(rows).toHaveLength(6);
+    expect(rows.at(-1)).toBe(',Balance,,,,,,,,0.00,0.00,0.00,');
+  });
+});
+
 test.describe('help', () => {
   test('answers a question, and shows where to do it', async ({ page, request }) => {
     // A support link to the help answers 200, not GitHub Pages' 404 fallback.
@@ -832,7 +901,7 @@ test('opens a deep link straight to a group', async ({ page }) => {
 test.describe('accessibility', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`has no axe violations on the main screens in ${scheme} mode`, async ({ page }) => {
-      // Twenty-one scans take longer on CI than the default limit allows.
+      // Twenty-three scans take longer on CI than the default limit allows.
       test.slow();
       // Scan settled screens, not frames of a fade: ask for reduced motion, as some visitors do.
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
@@ -888,8 +957,15 @@ test.describe('accessibility', () => {
       await page.goto('group/demo_japan/member/you?pay=add');
       await page.getByTestId('pay-handle').fill('ahmadb');
       await scan('add how you get paid');
+      await page.goto('group/demo_flat/expense');
+      await tab(page, 'Monthly').click();
+      await scan('a repeating expense');
       await page.goto('group/demo_japan/settings');
       await scan('group settings');
+      await page.getByTestId('archive-group').click();
+      await page.goto('group/demo_japan');
+      await scan('an archived group');
+      await page.goto('group/demo_japan/settings');
       await page.getByTestId('delete-group').click();
       await scan('confirm delete');
       await page.goto('new-group');
