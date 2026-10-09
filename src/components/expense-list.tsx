@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { type RefObject, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, type TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { totalOf } from '@/lib/balances';
@@ -28,7 +28,7 @@ const PAGE = 50;
 const plural = (count: number) => `${count} expense${count === 1 ? '' : 's'}`;
 
 /** A group's expenses by day, newest first, with search, a category filter and the spending at a glance. */
-export function ExpenseList({ group }: { group: Group }) {
+export function ExpenseList({ group, searchRef }: { group: Group; searchRef?: RefObject<TextInput | null> }) {
   const theme = useTheme();
   const removeExpense = useGroups((state) => state.removeExpense);
   const restoreExpense = useGroups((state) => state.restoreExpense);
@@ -71,6 +71,7 @@ export function ExpenseList({ group }: { group: Group }) {
       {sorted.length >= 4 ? (
         <View style={styles.tools}>
           <Field
+            ref={searchRef}
             testID="search-expenses"
             accessibilityLabel="Search expenses"
             placeholder="Search expenses"

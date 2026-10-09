@@ -2,9 +2,11 @@ import { ReactNode } from 'react';
 import { Platform, ScrollView, ScrollViewProps, StyleSheet, View, ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { HelpId } from '@/lib/help';
 import { MAX_WIDTH, radius, space, useTheme } from '@/theme';
 
 import { IconButton } from './button';
+import { HelpLink } from './help-link';
 import { IconName } from './icon';
 import { Text } from './text';
 
@@ -69,11 +71,19 @@ export function Card({ children, style, ...props }: ViewProps & { children: Reac
   );
 }
 
-export function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text variant="caption" tone="muted" accessibilityRole="header" style={styles.sectionLabel}>
+/** A small heading above a section; with `help`, a “?” at its end opens that answer. */
+export function SectionLabel({ children, help }: { children: string; help?: HelpId }) {
+  const label = (
+    <Text variant="caption" tone="muted" accessibilityRole="header" style={[styles.sectionLabel, help ? styles.inRow : null]}>
       {children}
     </Text>
+  );
+  if (!help) return label;
+  return (
+    <View style={styles.labelRow}>
+      {label}
+      <HelpLink id={help} />
+    </View>
   );
 }
 
@@ -88,4 +98,6 @@ const styles = StyleSheet.create({
   topBarTitle: { flex: 1, textAlign: 'center' },
   card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space(4) },
   sectionLabel: { textTransform: 'uppercase', letterSpacing: 0.8, marginTop: space(6), marginBottom: space(2) },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space(6), marginBottom: space(1) },
+  inRow: { marginTop: 0, marginBottom: 0 },
 });

@@ -10,6 +10,7 @@ import { radius, space, useTheme } from '@/theme';
 import { Button, IconButton } from './button';
 import { Field } from './field';
 import { Text } from './text';
+import { HelpLink } from './help-link';
 
 /** A rate someone fixed: typed in, or kept from when the expense was saved. */
 export type PinnedRate = { rate: Rate; source: 'typed' | 'saved' };
@@ -108,13 +109,16 @@ export function Conversion({
       </View>
 
       {rate ? (
-        <Text variant="label" testID="rate">
-          {describeRate(rate, quoteOf(rate, from, to))}
-          <Text variant="label" tone="muted">
-            {' · '}
-            {sourceLine(pinned, ecb, date)}
+        <View style={styles.rateLine}>
+          <Text variant="label" testID="rate" style={styles.rateText}>
+            {describeRate(rate, quoteOf(rate, from, to))}
+            <Text variant="label" tone="muted">
+              {' · '}
+              {sourceLine(pinned, ecb, date)}
+            </Text>
           </Text>
-        </Text>
+          <HelpLink id="currency" />
+        </View>
       ) : ecb.status === 'loading' ? (
         <Text variant="label" tone="muted">
           Looking up the ECB rate for {inSentence(date)}…
@@ -181,6 +185,8 @@ export function Conversion({
 }
 
 const styles = StyleSheet.create({
+  rateLine: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
+  rateText: { flex: 1 },
   card: { borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, padding: space(4), gap: space(2), marginBottom: space(3) },
   top: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   figure: { fontVariant: ['tabular-nums'] },

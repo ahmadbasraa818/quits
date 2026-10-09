@@ -48,7 +48,7 @@ const OPERATORS = [
 ] as const;
 
 /** The form’s starting state: the one being edited, a quick-add draft carried over, or a blank expense. */
-function initialState(group: Group, expense: Expense | undefined, people: Member[], draft: QuickDraft | null) {
+function initialState(group: Group, expense: Expense | undefined, people: Member[], draft: QuickDraft | null, linkedKind: SplitKind | null) {
   const everyone = people.map((member) => member.id);
   if (!expense && draft) {
     return {
@@ -79,7 +79,7 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
     description: expense?.description ?? '',
     category: (expense?.category ?? 'food') as CategoryId,
     paidBy: expense?.paidBy ?? group.me,
-    kind: (split?.kind ?? 'equal') as SplitKind,
+    kind: (split?.kind ?? linkedKind ?? 'equal') as SplitKind,
     among: split?.kind === 'equal' ? split.among : everyone,
     shares: split?.kind === 'shares' ? split.shares : Object.fromEntries(everyone.map((id) => [id, 1])),
     exactTexts:
@@ -94,7 +94,7 @@ function initialState(group: Group, expense: Expense | undefined, people: Member
   };
 }
 
-function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?: Expense; draft?: QuickDraft | null }) {
+function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { group: Group; expense?: Expense; draft?: QuickDraft | null; linkedKind?: SplitKind | null }) {
   const theme = useTheme();
   const addExpense = useGroups((state) => state.addExpense);
   const updateExpense = useGroups((state) => state.updateExpense);
@@ -102,7 +102,7 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
   const restoreExpense = useGroups((state) => state.restoreExpense);
   const showToast = useToast((state) => state.show);
   const people = useMemo(() => peopleFor(group, expense), [group, expense]);
-  const start = useMemo(() => initialState(group, expense, people, draft), [group, expense, people, draft]);
+  const start = useMemo(() => initialState(group, expense, people, draft, linkedKind), [group, expense, people, draft, linkedKind]);
   const [amountText, setAmountText] = useState(start.amountText);
   const [description, setDescription] = useState(start.description);
   const [category, setCategory] = useState<CategoryId>(start.category);
@@ -295,7 +295,7 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
             ))}
           </View>
 
-          <SectionLabel>Split</SectionLabel>
+          <SectionLabel help={kind === 'items' ? 'items' : 'split'}>Split</SectionLabel>
           <Segmented label="How to split it" options={SPLITS} value={kind} onChange={chooseKind} />
           {itemised ? (
             <ItemsEditor
@@ -420,7 +420,9 @@ function ExpenseForm({ group, expense, draft = null }: { group: Group; expense?:
 }
 
 export default function ExpenseScreen() {
-  const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
+  // A new expense can start in a split mode, such as items, from a link.
+  const { id, expenseId, split } = useLocalSearchParams<{ id: string; expenseId?: string; split?: string }>();
+  const linkedKind = (['equal', 'shares', 'exact', 'items'] as const).find((kind) => kind === split) ?? null;
   const group = useLastDefined(useGroup(id));
   const expense = useLastDefined(group?.expenses.find((item) => item.id === expenseId));
   // A draft handed over from quick add, taken once.
@@ -435,7 +437,7 @@ export default function ExpenseScreen() {
       </Screen>
     );
   }
-  return <ExpenseForm key={expense?.id ?? 'new'} group={group} expense={expense} draft={draft} />;
+  return <ExpenseForm key={expense?.id ?? 'new'} group={group} expense={expense} draft={draft} linkedKind={linkedKind} />;
 }
 
 const styles = StyleSheet.create({
