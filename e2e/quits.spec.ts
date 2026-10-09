@@ -13,7 +13,7 @@ const tab = (page: Page, name: string) => page.getByRole('tab', { name });
 
 test('shows what you are owed across the demo groups', async ({ page }) => {
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Quits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quits', exact: true })).toBeVisible();
   await expect(page.getByText('¥46,134').first()).toBeVisible();
   for (const name of ['Japan trip', 'Flat 4B', 'Brighton day trip']) {
     await expect(page.getByRole('button', { name: new RegExp(`^${name}\\.`) })).toBeVisible();
@@ -209,7 +209,7 @@ test('deletes a group, and undo brings it back', async ({ page }) => {
   await page.getByTestId('delete-group').click();
   await expect(page.getByRole('heading', { name: 'Delete Flat 4B?' })).toBeVisible();
   await page.getByTestId('confirm').click();
-  await expect(page.getByRole('heading', { name: 'Quits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quits', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByRole('button', { name: /^Flat 4B\./ })).toBeVisible();
@@ -511,14 +511,19 @@ test('saves a backup, and restores it', async ({ page }) => {
 });
 
 test.describe('looking after saved data', () => {
-  // Seeds this browser's storage once, before the app first loads, and not again on a reload.
+  // Seeds this browser's storage once, before the app first loads, and not again on a reload. Someone with
+  // saved groups has also seen this version's changes, so what's new doesn't cover the page.
   const seed = (page: Page, value: string) =>
-    page.addInitScript((saved) => {
-      if (!sessionStorage.getItem('seeded')) {
-        localStorage.setItem('quits', saved);
-        sessionStorage.setItem('seeded', 'yes');
-      }
-    }, value);
+    page.addInitScript(
+      ([saved, settings]) => {
+        if (!sessionStorage.getItem('seeded')) {
+          localStorage.setItem('quits', saved);
+          localStorage.setItem('quits-settings', settings);
+          sessionStorage.setItem('seeded', 'yes');
+        }
+      },
+      [value, JSON.stringify({ state: { welcomeDone: true, seenVersion: app.expo.version }, version: 0 })]
+    );
 
   test('sets aside saved data it can’t read, and keeps it until it’s saved or deleted', async ({ page }) => {
     await seed(page, '{not json');
@@ -595,18 +600,106 @@ test('answers a shared link with a preview, not a 404', async ({ request }) => {
   expect((await request.get('og.png')).status()).toBe(200);
 });
 
+test.describe('help', () => {
+  test('answers a question, and shows where to do it', async ({ page }) => {
+    await page.goto('./');
+    await page.getByTestId('open-help').click();
+    await expect(page.getByRole('heading', { name: 'Help', exact: true })).toBeVisible();
+    await page.getByTestId('help-search').fill('item by item');
+    await page.getByText('How do I split a bill item by item?').click();
+    await expect(page.getByText(/choose Items under Split/)).toBeVisible();
+    await page.getByTestId('show-items').click();
+    await expect(page.getByRole('heading', { name: 'Add expense' })).toBeVisible();
+    await expect(tab(page, 'Items')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('opens the answer from a “?” beside the thing it explains', async ({ page }) => {
+    await page.goto('group/demo_japan?tab=settle');
+    await expect(page.getByTestId('settle-headline')).toHaveText('4 payments settle everyone');
+    await page.getByTestId('help-fewest').click();
+    await expect(page.getByTestId('asked')).toContainText('How does Quits find the fewest payments?');
+  });
+
+  test('welcomes someone new, until they put it away', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'phone', 'On a wide screen the welcome sits beside the groups instead');
+    await page.goto('./');
+    await expect(page.getByTestId('welcome-card')).toBeVisible();
+    await page.getByTestId('welcome-dismiss').click();
+    await expect(page.getByTestId('welcome-card')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('button', { name: /^Japan trip\./ })).toBeVisible();
+    await expect(page.getByTestId('welcome-card')).toHaveCount(0);
+  });
+
+  test('tells someone back after an update what’s new, once', async ({ page }) => {
+    // A save from before this version kept track of what's been seen: groups, and no settings.
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        localStorage.setItem('quits', JSON.stringify({ state: { groups: [] }, version: 3 }));
+        sessionStorage.setItem('seeded', 'yes');
+      }
+    });
+    await page.goto('./');
+    await expect(page.getByTestId('whats-new')).toBeVisible();
+    await expect(page.getByText('Help when you need it')).toBeVisible();
+    await page.getByTestId('whats-new-done').click();
+    await expect(page.getByTestId('whats-new')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByTestId('new-group').first()).toBeVisible();
+    await expect(page.getByTestId('whats-new')).toHaveCount(0);
+  });
+
+  test('works from the keyboard on a computer', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Shortcuts are for a keyboard');
+    await page.goto('group/demo_japan');
+    await expect(page.getByRole('heading', { name: 'Japan trip' })).toBeVisible();
+    await page.keyboard.press('/');
+    await expect(page.getByTestId('search-expenses')).toBeFocused();
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('q');
+    await expect(page.getByTestId('quick-add')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('quick-add')).toBeHidden();
+    await page.keyboard.press('n');
+    await expect(page.getByRole('heading', { name: 'Add expense' })).toBeVisible();
+    await page.goto('./');
+    await page.keyboard.press('?');
+    await expect(page.getByRole('heading', { name: 'Help', exact: true })).toBeVisible();
+  });
+});
+
+test('resets or removes the demo groups, keeping your own', async ({ page }) => {
+  await page.goto('new-group');
+  await page.getByTestId('group-name').fill('Lisbon weekend');
+  await page.getByTestId('person-0').fill('Rui');
+  await page.getByTestId('create-group').click();
+  await expect(page.getByRole('heading', { name: 'Lisbon weekend' })).toBeVisible();
+
+  await page.goto('about');
+  await page.getByTestId('reset-demo').click();
+  await expect(page.getByRole('button', { name: /^Lisbon weekend\./ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Japan trip\./ })).toBeVisible();
+
+  await page.goto('about');
+  await page.getByTestId('remove-demo').click();
+  await expect(page.getByRole('button', { name: /^Japan trip\./ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Lisbon weekend\./ })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('button', { name: /^Japan trip\./ })).toBeVisible();
+});
+
 test.describe('offline', () => {
   test.use({ serviceWorkers: 'allow' });
 
   test('opens without a connection once it has been opened', async ({ page, context }) => {
     await page.goto('./');
-    await expect(page.getByRole('heading', { name: 'Quits' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quits', exact: true }).first()).toBeVisible();
     // The worker keeps every file before it takes over.
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.waitForFunction(async () => (await caches.keys()).some((key) => key.startsWith('quits-')));
     await context.setOffline(true);
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Quits' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quits', exact: true }).first()).toBeVisible();
     await page.goto('group/demo_flat');
     await expect(page.getByRole('heading', { name: 'Flat 4B' })).toBeVisible();
   });
@@ -657,6 +750,14 @@ test.describe('accessibility', () => {
       await scan('a broken link');
       await page.goto('privacy');
       await scan('privacy');
+      await page.goto('help');
+      await scan('help');
+      await page.goto('help?entry=fewest');
+      await scan('an answer');
+      await page.goto('about');
+      await page.getByTestId('open-changes').click();
+      await scan('what’s new');
+      await page.keyboard.press('Escape');
       await page.goto('group/demo_japan');
       await page.getByTestId('quick-add-button').click();
       await page.getByLabel('Describe the expense').fill('Ramen ¥4,800, Aiko paid, split with Ben and me');

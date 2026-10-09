@@ -35,7 +35,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 300 unit, property and component tests and 83 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 326 unit, property and component tests and 93 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -65,7 +65,13 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Back up every group to a file** and restore it on any device: a download on the web, the share sheet on a phone.
 - **Safe by default.** Saved data Quits can't read is set aside, never written over; a browser that won't save says so and offers a backup; and if a screen ever breaks, it offers a way out instead of a blank page.
 - **Private by design**, with no account, server, analytics or tracking. The [privacy page](https://ahmadbasraa818.github.io/quits/privacy) says exactly when anything leaves the device.
-- **Groups for anything:** rename them, add people, mark who has left, or delete a group and undo it.
+- **Groups for anything:** rename them, add people, mark who has left, or delete a group and undo it. The demo groups can be reset, or cleared away when you're ready, without touching your own.
+
+**Help when you need it**
+
+- **A help centre you can search**, with a “?” beside the trickier parts that opens the answer, and “Show me” buttons that open the right screen in the right state.
+- **A welcome for anyone new**, and a note on what's new after each update.
+- **Keyboard shortcuts** on a computer: N adds an expense, Q is quick add, / searches and ? opens help.
 
 **Everywhere**
 
@@ -256,8 +262,8 @@ scripts/        icons, the web export and its service worker, screenshots
 
 ## Quality
 
-- **300 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **83 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **326 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **93 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;
@@ -266,7 +272,9 @@ scripts/        icons, the web export and its service worker, screenshots
   - share a copy to a second, empty browser that opens it as another person; save and restore a backup;
   - keep the groups beside the open one on a wide screen; open the app offline from the service worker's copy; follow a deep link;
   - set aside saved data that can't be read, open the sound groups beside a damaged one, and warn when the browser won't save;
-  - and run axe accessibility scans of seventeen screens and sheets in light and dark mode.
+  - search the help and follow an answer to the right screen, open an answer from a “?”, welcome someone new, tell someone back after an update what's new once, and drive a group from the keyboard;
+  - reset or remove the demo groups while keeping the person's own;
+  - and run axe accessibility scans of twenty screens and sheets in light and dark mode.
 - **On a phone too:** opening share links, saving a backup through the share sheet and reading it back have been run on iOS, in Expo Go on the simulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
