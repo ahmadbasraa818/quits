@@ -6,7 +6,7 @@ import { STORE_VERSION } from '../migrations';
 const find = (id: string) => useGroups.getState().groups.find((group) => group.id === id)!;
 
 describe('copies from a shared link', () => {
-  beforeEach(() => useGroups.getState().resetDemo());
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
 
   it('adds a copy of its own, with you as the person you chose', () => {
     const [japan] = demoGroups(new Date(2026, 9, 4));
@@ -68,6 +68,6 @@ describe('backups', () => {
   it('replaces everything when restored', () => {
     useGroups.getState().replaceAll([groups[1]]);
     expect(useGroups.getState().groups.map((group) => group.id)).toEqual(['demo_flat']);
-    useGroups.getState().resetDemo();
+    useGroups.getState().replaceAll(demoGroups());
   });
 });

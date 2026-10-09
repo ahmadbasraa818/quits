@@ -6,6 +6,7 @@ import { useGroups } from '@/store/groups';
 
 import { QuickAdd } from '../quick-add';
 import { ToastHost } from '../toast';
+import { demoGroups } from '@/store/demo';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
@@ -24,7 +25,7 @@ function Quick({ onClose = jest.fn() }: { onClose?: () => void }) {
 describe('QuickAdd', () => {
   beforeEach(async () => {
     jest.useFakeTimers({ now: new Date(2026, 9, 4, 12), advanceTimers: true });
-    await act(async () => useGroups.getState().resetDemo());
+    await act(async () => useGroups.getState().replaceAll(demoGroups()));
   });
   afterEach(() => jest.useRealTimers());
 

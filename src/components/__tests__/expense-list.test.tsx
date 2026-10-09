@@ -4,6 +4,7 @@ import type { Expense, Group } from '@/lib/types';
 import { useGroups } from '@/store/groups';
 
 import { ExpenseList } from '../expense-list';
+import { demoGroups } from '@/store/demo';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 // Swiping is tested by hand and end to end; here the rows only need to render.
@@ -13,7 +14,7 @@ const japan = () => useGroups.getState().groups.find((group) => group.id === 'de
 
 describe('ExpenseList', () => {
   beforeEach(async () => {
-    await act(async () => useGroups.getState().resetDemo());
+    await act(async () => useGroups.getState().replaceAll(demoGroups()));
   });
 
   it('finds expenses by what they were for', async () => {

@@ -5,6 +5,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { appVersion, issueUrl, openLink } from '@/components/crash-screen';
+import { RELEASES, WhatsNew } from '@/components/whats-new';
 import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
@@ -15,7 +16,7 @@ import { ConfirmDialog } from '@/components/confirm';
 import { localDate } from '@/lib/dates';
 import type { Group } from '@/lib/types';
 import { fromBackup, toBackup } from '@/store/backup';
-import { useGroups } from '@/store/groups';
+import { isDemo, useGroups } from '@/store/groups';
 import { space, useTheme } from '@/theme';
 
 const SOURCE = 'https://github.com/ahmadbasraa818/quits';
@@ -143,7 +144,16 @@ function YourData() {
 export default function AboutScreen() {
   const theme = useTheme();
   const resetDemo = useGroups((state) => state.resetDemo);
+  const removeDemo = useGroups((state) => state.removeDemo);
+  const replaceAll = useGroups((state) => state.replaceAll);
+  const hasDemo = useGroups((state) => state.groups.some(isDemo));
   const showToast = useToast((state) => state.show);
+  const [changes, setChanges] = useState(false);
+  // Back to the groups already underneath, rather than stacking a second copy of them.
+  const toGroups = () => {
+    if (router.canDismiss()) router.dismissAll();
+    else router.replace('/');
+  };
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const openSource = () => {
     if (Platform.OS === 'web') window.open(SOURCE, '_blank', 'noopener');
@@ -180,14 +190,17 @@ export default function AboutScreen() {
           <InstallCard />
         </View>
 
-        <SectionLabel>Your data</SectionLabel>
+        <SectionLabel help="backup">Your data</SectionLabel>
         <YourData />
 
-        <SectionLabel>Privacy and help</SectionLabel>
+        <SectionLabel>Help and privacy</SectionLabel>
         <View style={styles.dataActions}>
+          <Button label="Help" icon="question" variant="secondary" testID="open-help" onPress={() => router.push('/help')} />
+          <Button label="What’s new" icon="sparkle" variant="secondary" testID="open-changes" onPress={() => setChanges(true)} />
           <Button label="How Quits handles your data" icon="shieldCheck" variant="secondary" testID="open-privacy" onPress={() => router.push('/privacy')} />
           <Button label="Report a problem" icon="bug" variant="ghost" testID="report-problem" onPress={() => openLink(issueUrl())} />
         </View>
+        <WhatsNew releases={RELEASES} visible={changes} onClose={() => setChanges(false)} />
 
         <SectionLabel>Made with</SectionLabel>
         <Text variant="body" tone="muted">
@@ -200,18 +213,29 @@ export default function AboutScreen() {
         <View style={styles.actions}>
           <Button label="View the source on GitHub" icon="githubLogo" variant="secondary" onPress={openSource} />
           <Button
-            label="Reset the demo data"
+            label="Reset the demo groups"
             icon="arrowCounterClockwise"
             variant="ghost"
             testID="reset-demo"
             onPress={() => {
-              resetDemo();
-              showToast('Demo data restored');
-              // Back to the groups already underneath, rather than stacking a second copy of them.
-              if (router.canDismiss()) router.dismissAll();
-              else router.replace('/');
+              const before = resetDemo();
+              showToast('Demo groups restored', { label: 'Undo', onPress: () => replaceAll(before) });
+              toGroups();
             }}
           />
+          {hasDemo ? (
+            <Button
+              label="Remove the demo groups"
+              icon="trash"
+              variant="ghost"
+              testID="remove-demo"
+              onPress={() => {
+                const before = removeDemo();
+                showToast('Removed the demo groups', { label: 'Undo', onPress: () => replaceAll(before) });
+                toGroups();
+              }}
+            />
+          ) : null}
         </View>
       </Scroll>
     </Screen>

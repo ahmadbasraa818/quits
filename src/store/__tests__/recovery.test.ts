@@ -19,7 +19,7 @@ const settle = async () => {
 beforeEach(async () => {
   await AsyncStorage.clear();
   useRecovery.setState({ setAside: [], notSaving: false });
-  useGroups.getState().resetDemo();
+  useGroups.getState().replaceAll(demoGroups());
 });
 
 describe('saved data Quits can’t read', () => {
