@@ -42,6 +42,14 @@ export function dayLabel(date: string, now = new Date()): string {
   return parsed.getFullYear() === now.getFullYear() ? label : `${label} ${parsed.getFullYear()}`;
 }
 
+/** How long ago something happened, by the calendar: "today", "yesterday", "3 days ago". */
+export function agoLabel(at: number, now = new Date()): string {
+  const then = new Date(at);
+  const days = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(then.getFullYear(), then.getMonth(), then.getDate())) / 86_400_000);
+  if (days <= 0) return 'today';
+  return days === 1 ? 'yesterday' : `${days} days ago`;
+}
+
 /** "Friday 2 October 2026", for screen readers. */
 export function longDateLabel(date: string): string {
   const parsed = parseLocalDate(date);

@@ -1,7 +1,17 @@
 import type { Transfer } from './balances';
 import { nameOf } from './members';
 import { formatMoney } from './money';
+import { payUrl, SERVICES } from './pay';
 import type { Group } from './types';
+
+type Sendable = Pick<Group, 'name' | 'members' | 'me' | 'currency'>;
+
+/** The links to pay whoever a payment goes to, asking for its amount where the service can be told it. */
+function payLinks(group: Sendable, transfer: Transfer): { name: string; url: string }[] {
+  const methods = group.members.find((member) => member.id === transfer.to)?.pay ?? [];
+  const request = { amount: transfer.amount, currency: group.currency, note: group.name };
+  return methods.map((method) => ({ name: SERVICES[method.kind].name, url: payUrl(method, request) }));
+}
 
 export const APP_URL = 'https://ahmadbasraa818.github.io/quits/';
 
@@ -13,15 +23,34 @@ export function paymentLine(group: Pick<Group, 'members' | 'me' | 'currency'>, t
   return `${from} ${verb} ${to} ${formatMoney(transfer.amount, group.currency)}`;
 }
 
-/** The plan as a message to send the group. */
-export function planText(group: Pick<Group, 'name' | 'members' | 'me' | 'currency'>, transfers: Transfer[], directCount: number): string {
+/** The plan as a message to send the group, with a link to pay each person who has added one. */
+export function planText(group: Sendable, transfers: Transfer[], directCount: number): string {
   const count = transfers.length;
   const saving = directCount > count ? ` instead of ${directCount} pair by pair` : '';
   return [
     `Settling up for ${group.name}:`,
-    ...transfers.map((transfer) => `• ${paymentLine(group, transfer)}`),
+    ...transfers.flatMap((transfer) => {
+      const [link] = payLinks(group, transfer);
+      const line = `• ${paymentLine(group, transfer)}`;
+      return link ? [line, `  Pay ${transfer.to === group.me ? 'me' : nameOf(group, transfer.to)}: ${link.url}`] : [line];
+    }),
     '',
     `${count === 1 ? 'One payment' : `${count} payments`}${saving}, worked out with Quits: ${APP_URL}`,
+  ].join('\n');
+}
+
+/**
+ * A friendly reminder to whoever makes a payment: what they owe, and who
+ * to, with every way to pay that person has added.
+ */
+export function reminderText(group: Sendable, transfer: Transfer): string {
+  const payee = transfer.to === group.me ? 'me' : nameOf(group, transfer.to);
+  const links = payLinks(group, transfer);
+  return [
+    `Hi ${nameOf(group, transfer.from)}, a quick reminder from ${group.name}: you owe ${payee} ${formatMoney(transfer.amount, group.currency)}.`,
+    ...(links.length > 0 ? ['', `To pay ${payee}:`, ...links.map((link) => `${link.name}: ${link.url}`)] : []),
+    '',
+    'Thanks!',
   ].join('\n');
 }
 

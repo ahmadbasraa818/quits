@@ -5,6 +5,7 @@ import { persist, type PersistStorage } from 'zustand/middleware';
 import { createId } from '@/lib/ids';
 import { hasHistory, nextTone, tonesFor } from '@/lib/members';
 import type { CurrencyCode } from '@/lib/money';
+import type { PayMethod } from '@/lib/pay';
 import type { Expense, Group, Member, Payment } from '@/lib/types';
 import { validateGroup } from '@/lib/validate';
 
@@ -37,6 +38,8 @@ type GroupsState = {
   recordPayment: (groupId: string, payment: NewPayment) => string;
   removePayment: (groupId: string, paymentId: string) => Payment | undefined;
   restorePayment: (groupId: string, payment: Payment) => void;
+  /** Sets how someone gets paid. Returns how it was, to undo. */
+  setPayMethods: (groupId: string, memberId: string, methods: PayMethod[]) => PayMethod[];
   /** Puts the demo groups back as they first were, keeping the person's own. Returns every group as it was, to undo. */
   resetDemo: () => Group[];
   /** Removes the demo groups, for someone ready to use Quits for real. Returns every group as it was, to undo. */
@@ -252,6 +255,25 @@ export const useGroups = create<GroupsState>()(
             updatedAt: Date.now(),
           })),
         }),
+
+      setPayMethods: (groupId, memberId, methods) => {
+        const before = get()
+          .groups.find((group) => group.id === groupId)
+          ?.members.find((member) => member.id === memberId)?.pay;
+        set({
+          groups: updateGroup(get().groups, groupId, (group) => ({
+            ...group,
+            members: group.members.map((member) => {
+              if (member.id !== memberId) return member;
+              const next: Member = { ...member, pay: methods };
+              if (methods.length === 0) delete next.pay;
+              return next;
+            }),
+            updatedAt: Date.now(),
+          })),
+        });
+        return before ?? [];
+      },
 
       resetDemo: () => {
         const before = get().groups;

@@ -57,9 +57,21 @@ describe('shared links', () => {
   });
 });
 
+/** The group with Ben's ways to pay set to these. */
+const withPay = (group: Group, pay: unknown[]) => ({ ...group, members: group.members.map((member) => (member.id === 'ben' ? { ...member, pay } : member)) });
+
 describe('checking a group from outside', () => {
   it('accepts every demo group', () => {
     for (const group of groups) expect(validateGroup(group)).toBe(group);
+  });
+
+  it('accepts how people get paid, and shares it', () => {
+    const paid = withPay(japan, [
+      { kind: 'paypal', handle: 'bensmith' },
+      { kind: 'link', handle: 'https://bunq.me/ben' },
+    ]);
+    expect(validateGroup(paid)).toBe(paid);
+    expect(decodeGroup(encodeGroup(paid as Group))).toEqual(paid);
   });
 
   const broken: [string, (group: Group) => unknown][] = [
@@ -75,6 +87,10 @@ describe('checking a group from outside', () => {
     ['a float for a rate', (group) => ({ ...group, expenses: [{ ...group.expenses[0], original: { amount: 100, currency: 'GBP', rate: { base: 'GBP', value: 207.31 } } }] })],
     ['someone paying themselves', (group) => ({ ...group, payments: [{ id: 'p', from: 'you', to: 'you', amount: 100, date: '2026-10-01', createdAt: 0 }] })],
     ['a name too long to show', (group) => ({ ...group, name: 'x'.repeat(500) })],
+    ['a way to pay that runs a script', (group) => withPay(group, [{ kind: 'link', handle: 'javascript:alert(1)' }])],
+    ['a username with a path in it', (group) => withPay(group, [{ kind: 'paypal', handle: 'ben/../../evil' }])],
+    ['a service Quits doesn’t know', (group) => withPay(group, [{ kind: 'bitcoin', handle: 'ben' }])],
+    ['more ways to pay than anyone needs', (group) => withPay(group, ['a', 'b', 'c', 'd'].map((handle) => ({ kind: 'paypal', handle })))],
   ];
   it.each(broken)('turns away a group with %s', (_, breakIt) => {
     expect(validateGroup(breakIt(japan))).toBeNull();

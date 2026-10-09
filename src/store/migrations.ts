@@ -12,7 +12,7 @@ function content(group: Group): string {
   return JSON.stringify({
     name: group.name,
     currency: group.currency,
-    members: group.members.map(({ id, name, tone, left }) => [id, name, tone, left ?? false]),
+    members: group.members.map(({ id, name, tone, left, pay }) => [id, name, tone, left ?? false, pay ?? null]),
     expenses: group.expenses.map(({ description, amount, paidBy, split, category, original, note }) => [description, amount, paidBy, split, category, original ?? null, note ?? null]),
     payments: group.payments.map(({ from, to, amount }) => [from, to, amount]),
   });

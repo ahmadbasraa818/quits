@@ -31,6 +31,13 @@ describe('migrating saved data', () => {
     expect(jrPass(groups)).toBe(false);
   });
 
+  it('keeps a demo group the visitor added ways to pay to', () => {
+    const [japan, flat, brighton] = demoGroups(new Date(2026, 0, 15), 1);
+    const paid = { ...japan, members: japan.members.map((member) => (member.id === 'you' ? { ...member, pay: [{ kind: 'paypal' as const, handle: 'ahmad' }] } : member)) };
+    const { groups } = migrate({ groups: [paid, flat, brighton] }, 1);
+    expect(groups[0]).toBe(paid);
+  });
+
   it('keeps the visitor’s own groups, and their order', () => {
     const [japan] = demoGroups(new Date(2026, 0, 15), 1);
     const own = { ...japan, id: 'g_mine', name: 'Lisbon' };

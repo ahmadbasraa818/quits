@@ -1,8 +1,22 @@
 import * as fc from 'fast-check';
 
-import { addDays, dayLabel, daysAgo, isValidDate, localDate, longDateLabel, monthGrid, monthLabel, parseLocalDate } from '../dates';
+import { addDays, agoLabel, dayLabel, daysAgo, isValidDate, localDate, longDateLabel, monthGrid, monthLabel, parseLocalDate } from '../dates';
 
 const now = new Date(2026, 9, 4, 13, 30);
+
+describe('how long ago', () => {
+  const morning = new Date(2026, 9, 9, 10, 30);
+  it('counts calendar days, not hours', () => {
+    expect(agoLabel(new Date(2026, 9, 9, 0, 5).getTime(), morning)).toBe('today');
+    expect(agoLabel(new Date(2026, 9, 8, 23, 55).getTime(), morning)).toBe('yesterday');
+    expect(agoLabel(new Date(2026, 9, 6, 12).getTime(), morning)).toBe('3 days ago');
+    expect(agoLabel(new Date(2025, 11, 31).getTime(), new Date(2026, 0, 2))).toBe('2 days ago');
+  });
+
+  it('calls a time from a clock that’s ahead today', () => {
+    expect(agoLabel(new Date(2026, 9, 10).getTime(), morning)).toBe('today');
+  });
+});
 
 describe('dates', () => {
   it('names the nearest days, and writes the rest briefly', () => {

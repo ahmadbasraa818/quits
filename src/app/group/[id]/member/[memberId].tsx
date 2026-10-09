@@ -6,6 +6,7 @@ import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Money } from '@/components/money';
+import { PayMethods } from '@/components/pay-methods';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { categoryOf } from '@/lib/categories';
@@ -29,7 +30,7 @@ function lineWords(group: Group, memberId: string, line: StatementLine): { title
   return { title: line.description, detail: `${dayLabel(line.date)} · ${parts.join(', ')}` };
 }
 
-function Statement({ group, memberId }: { group: Group; memberId: string }) {
+function Statement({ group, memberId, addingPay }: { group: Group; memberId: string; addingPay: boolean }) {
   const theme = useTheme();
   const lines = useMemo(() => statementFor(group, memberId), [group, memberId]);
   const person = useMemo(() => whoPaidWhoUsed(group).find((entry) => entry.id === memberId), [group, memberId]);
@@ -90,6 +91,8 @@ function Statement({ group, memberId }: { group: Group; memberId: string }) {
           </View>
         </Card>
 
+        <PayMethods group={group} memberId={memberId} startAdding={addingPay} />
+
         <SectionLabel>Every expense and payment</SectionLabel>
         {lines.length === 0 ? (
           <Text variant="body" tone="muted">
@@ -146,7 +149,8 @@ function Statement({ group, memberId }: { group: Group; memberId: string }) {
 }
 
 export default function MemberScreen() {
-  const { id, memberId } = useLocalSearchParams<{ id: string; memberId: string }>();
+  // pay=add opens the sheet to add how they get paid, from Settle up and from help.
+  const { id, memberId, pay } = useLocalSearchParams<{ id: string; memberId: string; pay?: string }>();
   const group = useGroup(id);
   if (!group) {
     return (
@@ -158,7 +162,7 @@ export default function MemberScreen() {
       </Screen>
     );
   }
-  return <Statement group={group} memberId={memberId} />;
+  return <Statement group={group} memberId={memberId} addingPay={pay === 'add'} />;
 }
 
 const styles = StyleSheet.create({
