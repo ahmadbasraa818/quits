@@ -3,13 +3,35 @@
 // The demo is converted to docs/demo.gif when ffmpeg is installed.
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASE = 'http://localhost:4173/quits/';
 const OUT = 'docs';
 const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const noWebShare = () => Object.defineProperty(Navigator.prototype, 'share', { value: undefined });
+// Someone who has used Quits before: no welcome card, and this version's notes already seen.
+const { version } = JSON.parse(readFileSync('app.json', 'utf8')).expo;
+const regular = (seen) => localStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: true, seenVersion: seen }, version: 0 }));
+// A weekend where Rui paid for dinner, with his PayPal and Monzo, and Ana reminded yesterday.
+const lisbon = {
+  id: 'g_lisbon',
+  name: 'Lisbon weekend',
+  currency: 'EUR',
+  me: 'you',
+  createdAt: 1,
+  members: [
+    { id: 'you', name: 'You', tone: 0 },
+    { id: 'rui', name: 'Rui', tone: 2, pay: [{ kind: 'paypal', handle: 'ruicosta' }, { kind: 'monzo', handle: 'rui' }] },
+    { id: 'ana', name: 'Ana', tone: 4 },
+  ],
+  expenses: [{ id: 'e1', description: 'Dinner at Taberna', amount: 9000, paidBy: 'rui', split: { kind: 'equal', among: ['you', 'rui', 'ana'] }, category: 'food', date: '2026-10-08', createdAt: 1 }],
+  payments: [],
+};
+const seedLisbon = ([group, seen]) => {
+  localStorage.setItem('quits', JSON.stringify({ state: { groups: [group] }, version: 4 }));
+  localStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: true, seenVersion: seen, haptics: true, reminded: { 'g_lisbon/ana/rui': Date.now() - 86_400_000 } }, version: 0 }));
+};
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
@@ -17,6 +39,7 @@ const browser = await chromium.launch();
 for (const scheme of ['light', 'dark']) {
   const context = await browser.newContext({ ...phone, baseURL: BASE, colorScheme: scheme, reducedMotion: 'reduce', permissions: ['clipboard-read', 'clipboard-write'] });
   await context.addInitScript(noWebShare);
+  await context.addInitScript(regular, version);
   const page = await context.newPage();
   const shot = async (name) => {
     await page.waitForTimeout(600);
@@ -34,7 +57,7 @@ for (const scheme of ['light', 'dark']) {
   await page.getByRole('button', { name: /^Japan trip\./ }).click();
   await page.getByRole('tab', { name: 'Settle up' }).click();
   await page.waitForTimeout(500);
-  // From the line under the heading down to the line that explains the plan, nothing cut: the website's poster.
+  // From the line under the heading: the graph, then the plan's payments with their reminders.
   await scroll((await page.getByText(/^Paying back pair by pair/).boundingBox()).y - 58);
   await shot('settle');
   await scroll(-2000);
@@ -83,7 +106,37 @@ for (const scheme of ['light', 'dark']) {
   await theirs.waitForTimeout(600);
   await theirs.screenshot({ path: join(OUT, `${scheme}-import.png`) });
   await friend.close();
+
+  // A monthly bill in the flat.
+  await page.goto('group/demo_flat');
+  await page.getByTestId('add-expense').click();
+  await page.getByTestId('amount').fill('1200');
+  await page.getByTestId('description').fill('Rent');
+  await page.getByRole('radio', { name: 'Home' }).click();
+  await page.getByRole('tab', { name: 'Monthly' }).click();
+  await page.locator('body').click({ position: { x: 5, y: 300 } });
+  // From who paid down to the note: the split, and how often it repeats.
+  await page.getByText('Paid by', { exact: true }).evaluate((label) => label.scrollIntoView({ block: 'start' }));
+  await scroll(-12);
+  await shot('repeat');
+
+  // Help, opened at the answer about getting paid.
+  await page.goto('help?entry=pay-links');
+  await shot('help');
   await context.close();
+
+  // Paying Rui through the ways he gets paid, and Ana reminded.
+  const weekend = await browser.newContext({ ...phone, baseURL: BASE, colorScheme: scheme, reducedMotion: 'reduce' });
+  await weekend.addInitScript(seedLisbon, [lisbon, version]);
+  const pay = await weekend.newPage();
+  await pay.goto('group/g_lisbon?tab=settle');
+  await pay.getByTestId('pay-with-paypal').waitFor();
+  await pay.getByTestId('transfer-ana-rui').evaluate((row) => row.scrollIntoView({ block: 'start' }));
+  await pay.mouse.move(195, 500);
+  await pay.mouse.wheel(0, -24);
+  await pay.waitForTimeout(600);
+  await pay.screenshot({ path: join(OUT, `${scheme}-pay.png`) });
+  await weekend.close();
 
   // A wide window: the groups stay in a sidebar beside the open one.
   const desktop = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2, colorScheme: scheme, reducedMotion: 'reduce' });
@@ -97,6 +150,7 @@ for (const scheme of ['light', 'dark']) {
 // The demo: add an expense by typing it, then settle the trip.
 rmSync(join(OUT, 'video'), { recursive: true, force: true });
 const context = await browser.newContext({ ...phone, deviceScaleFactor: 1, colorScheme: 'light', recordVideo: { dir: join(OUT, 'video'), size: { width: 390, height: 844 } } });
+await context.addInitScript(regular, version);
 const page = await context.newPage();
 await page.goto(BASE);
 await page.waitForTimeout(1400);

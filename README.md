@@ -139,6 +139,29 @@ The screenshots follow your GitHub theme. They're made from the web build by [`s
       <br><sub><b>Spending</b> by category and over time</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-pay.png">
+        <img src="docs/light-pay.png" width="250" alt="Settling up a Lisbon weekend: buttons to pay Rui with PayPal or Monzo, and Ana reminded yesterday">
+      </picture>
+      <br><sub><b>Pay in a tap</b>, or send a reminder</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-repeat.png">
+        <img src="docs/light-repeat.png" width="250" alt="Rent of £1,200 split three ways, repeating monthly, with the date the next one is added">
+      </picture>
+      <br><sub><b>Bills that come back</b> every month</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/dark-help.png">
+        <img src="docs/light-help.png" width="250" alt="Help opened at the answer to how people can pay you from Quits, above a search and the list of questions">
+      </picture>
+      <br><sub><b>Help</b>, with the answer asked for first</sub>
+    </td>
+  </tr>
 </table>
 
 <picture>
