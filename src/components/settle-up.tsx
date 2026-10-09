@@ -1,19 +1,24 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
-import { directDebts } from '@/lib/balances';
-import { dayLabel, daysAgo } from '@/lib/dates';
+import { directDebts, type Transfer } from '@/lib/balances';
+import { agoLabel, dayLabel, daysAgo } from '@/lib/dates';
 import { nameInSentence, nameOf } from '@/lib/members';
 import { formatMoney } from '@/lib/money';
-import { circlesExplanation, planText } from '@/lib/plan-text';
+import { asksForAmount, payUrl, SERVICES } from '@/lib/pay';
+import { circlesExplanation, planText, reminderText } from '@/lib/plan-text';
 import type { Group, Member } from '@/lib/types';
 import { useGroups } from '@/store/groups';
+import { remindedKey, useSettings } from '@/store/settings';
 import type { GroupSummary } from '@/store/summary';
 import { radius, space, useTheme } from '@/theme';
 
 import { Avatar } from './avatar';
 import { Button, IconButton } from './button';
+import { success, warning } from './haptics';
+import { HelpLink } from './help-link';
 import { Icon } from './icon';
 import { Card, SectionLabel } from './layout';
 import { Money } from './money';
@@ -21,10 +26,9 @@ import { PressableScale } from './pressable-scale';
 import { PaymentDraft, RecordPayment } from './record-payment';
 import { Segmented } from './segmented';
 import { SettleGraph } from './settle-graph';
-import { shareText } from './share';
+import { openPayLink, shareText } from './share';
 import { Text } from './text';
 import { useToast } from './toast';
-import { HelpLink } from './help-link';
 
 const memberOf = (group: Group, id: string): Member => group.members.find((member) => member.id === id) ?? { id, name: '?', tone: 0 };
 
@@ -74,13 +78,98 @@ function PaymentsMade({ group }: { group: Group }) {
                 testID={`delete-payment-${payment.id}`}
                 onPress={() => {
                   const removed = removePayment(group.id, payment.id);
-                  if (removed) showToast(`Deleted the payment from ${nameInSentence(group, removed.from)}`, { label: 'Undo', onPress: () => restorePayment(group.id, removed) });
+                  if (removed) {
+                    warning();
+                    showToast(`Deleted the payment from ${nameInSentence(group, removed.from)}`, { label: 'Undo', onPress: () => restorePayment(group.id, removed) });
+                  }
                 }}
               />
             </Animated.View>
           );
         })}
       </View>
+    </View>
+  );
+}
+
+/**
+ * Under a payment: when it's yours to make, a button for each way the person
+ * you owe gets paid; when it's someone else's, a reminder to send them.
+ */
+function TransferActions({ group, transfer, onPay }: { group: Group; transfer: Transfer; onPay: () => void }) {
+  const showToast = useToast((state) => state.show);
+  const key = remindedKey(group.id, transfer.from, transfer.to);
+  const reminded = useSettings((state) => state.reminded[key]);
+  const noteReminded = useSettings((state) => state.noteReminded);
+  const payee = nameOf(group, transfer.to);
+  const amount = formatMoney(transfer.amount, group.currency);
+
+  if (transfer.from === group.me) {
+    const methods = memberOf(group, transfer.to).pay ?? [];
+    if (methods.length === 0) {
+      return (
+        <View style={styles.transferActions}>
+          <Button
+            compact
+            variant="ghost"
+            icon="wallet"
+            label={`How does ${payee} get paid?`}
+            accessibilityHint={`Opens ${payee}’s page, to add how they get paid`}
+            testID={`ask-pay-${transfer.to}`}
+            onPress={() => router.push({ pathname: '/group/[id]/member/[memberId]', params: { id: group.id, memberId: transfer.to, pay: 'add' } })}
+          />
+        </View>
+      );
+    }
+    const request = { amount: transfer.amount, currency: group.currency, note: group.name };
+    return (
+      <View style={styles.transferActions}>
+        {methods.map((method) => {
+          const service = method.kind === 'link' ? 'the link' : SERVICES[method.kind].name;
+          return (
+            <View key={`${method.kind}-${method.handle}`} style={styles.payButton}>
+              <Button
+                compact
+                variant="secondary"
+                icon="arrowSquareOut"
+                label={method.kind === 'link' ? `Open ${payee}’s pay link` : `Pay with ${service}`}
+                accessibilityHint={asksForAmount(method, request) ? `Opens ${service} with ${amount} filled in` : `Opens ${service}, where you type in ${amount}`}
+                testID={`pay-with-${method.kind}`}
+                onPress={() => {
+                  openPayLink(payUrl(method, request));
+                  onPay();
+                }}
+              />
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
+  const payer = nameOf(group, transfer.from);
+  const remind = async () => {
+    const result = await shareText(reminderText(group, transfer));
+    if (result === 'shared' || result === 'copied') noteReminded(key);
+    if (result === 'copied') showToast('Reminder copied, ready to paste');
+    else if (result === 'failed') showToast('Couldn’t share the reminder from here');
+  };
+  return (
+    <View style={styles.transferActions}>
+      <Button
+        compact
+        variant="ghost"
+        icon="paperPlaneTilt"
+        label={`Remind ${payer}`}
+        accessibilityHint={`Writes ${payer} a message with what they owe, to send however you like`}
+        testID={`remind-${transfer.from}-${transfer.to}`}
+        onPress={remind}
+      />
+      {reminded ? (
+        <Text variant="caption" tone="muted" testID={`reminded-${transfer.from}-${transfer.to}`}>
+          Reminded {agoLabel(reminded)}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -97,6 +186,8 @@ export function SettleUp({ group, summary }: { group: Group; summary: GroupSumma
   const showToast = useToast((state) => state.show);
   const [view, setView] = useState<'plan' | 'direct'>('plan');
   const [recording, setRecording] = useState<{ draft: PaymentDraft; key: number } | null>(null);
+  // The payment whose pay link was just opened, so marking it paid is the next thing to do.
+  const [paying, setPaying] = useState<string | null>(null);
   const direct = useMemo(() => directDebts(group.expenses, group.payments), [group.expenses, group.payments]);
   const { transfers, method, circles } = summary.settlement;
   const record = (draft: PaymentDraft) => setRecording((current) => ({ draft, key: (current?.key ?? 0) + 1 }));
@@ -163,38 +254,43 @@ export function SettleUp({ group, summary }: { group: Group; summary: GroupSumma
         {transfers.map((transfer) => {
           const verb = transfer.from === group.me ? 'pay' : 'pays';
           const sentence = `${nameOf(group, transfer.from)} ${verb} ${nameOf(group, transfer.to)}`;
+          const key = `${transfer.from}-${transfer.to}`;
           return (
-            <Animated.View key={`${transfer.from}-${transfer.to}`} entering={FadeIn} exiting={FadeOut} layout={LinearTransition}>
-              <Card style={styles.transfer}>
-                <PressableScale
-                  style={styles.transferPeople}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${sentence} ${formatMoney(transfer.amount, group.currency)}`}
-                  accessibilityHint="Records all or part of this payment"
-                  onPress={() => record({ ...transfer })}
-                  testID={`transfer-${transfer.from}-${transfer.to}`}
-                >
-                  <Avatar member={memberOf(group, transfer.from)} size={32} />
-                  <Icon name="arrowRight" size={16} color={theme.inkMuted} />
-                  <Avatar member={memberOf(group, transfer.to)} size={32} />
-                  <View style={{ flex: 1, marginLeft: space(1) }}>
-                    <Text variant="label" numberOfLines={1}>
-                      {sentence}
-                    </Text>
-                    <Money amount={transfer.amount} currency={group.currency} variant="bodyStrong" />
-                  </View>
-                </PressableScale>
-                <Button
-                  compact
-                  variant="secondary"
-                  label="Mark paid"
-                  testID={`pay-${transfer.from}-${transfer.to}`}
-                  accessibilityHint={`Records that ${nameOf(group, transfer.from)} paid ${nameOf(group, transfer.to)} in full`}
-                  onPress={() => {
-                    const id = recordPayment(group.id, { ...transfer, date: daysAgo(0) });
-                    showToast(`Recorded ${formatMoney(transfer.amount, group.currency)} to ${nameInSentence(group, transfer.to)}`, { label: 'Undo', onPress: () => removePayment(group.id, id) });
-                  }}
-                />
+            <Animated.View key={key} entering={FadeIn} exiting={FadeOut} layout={LinearTransition}>
+              <Card style={styles.transferCard}>
+                <View style={styles.transfer}>
+                  <PressableScale
+                    style={styles.transferPeople}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${sentence} ${formatMoney(transfer.amount, group.currency)}`}
+                    accessibilityHint="Records all or part of this payment"
+                    onPress={() => record({ ...transfer })}
+                    testID={`transfer-${transfer.from}-${transfer.to}`}
+                  >
+                    <Avatar member={memberOf(group, transfer.from)} size={32} />
+                    <Icon name="arrowRight" size={16} color={theme.inkMuted} />
+                    <Avatar member={memberOf(group, transfer.to)} size={32} />
+                    <View style={{ flex: 1, marginLeft: space(1) }}>
+                      <Text variant="label" numberOfLines={1}>
+                        {sentence}
+                      </Text>
+                      <Money amount={transfer.amount} currency={group.currency} variant="bodyStrong" />
+                    </View>
+                  </PressableScale>
+                  <Button
+                    compact
+                    variant={paying === key ? 'primary' : 'secondary'}
+                    label="Mark paid"
+                    testID={`pay-${transfer.from}-${transfer.to}`}
+                    accessibilityHint={`Records that ${nameOf(group, transfer.from)} paid ${nameOf(group, transfer.to)} in full`}
+                    onPress={() => {
+                      const id = recordPayment(group.id, { ...transfer, date: daysAgo(0) });
+                      success();
+                      showToast(`Recorded ${formatMoney(transfer.amount, group.currency)} to ${nameInSentence(group, transfer.to)}`, { label: 'Undo', onPress: () => removePayment(group.id, id) });
+                    }}
+                  />
+                </View>
+                <TransferActions group={group} transfer={transfer} onPay={() => setPaying(key)} />
               </Card>
             </Animated.View>
           );
@@ -225,7 +321,11 @@ const styles = StyleSheet.create({
   headline: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2) },
   headlineText: { flex: 1 },
   rows: { gap: space(2) },
-  transfer: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3) },
+  transferCard: { gap: space(2.5), paddingVertical: space(3) },
+  transfer: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
+  transferActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space(2) },
+  // Pay buttons share a row when they fit, and each fills its own when they don't.
+  payButton: { flexGrow: 1 },
   transferPeople: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space(1.5) },
   note: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start', paddingTop: space(1) },
   actions: { gap: space(2) },

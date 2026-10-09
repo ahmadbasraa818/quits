@@ -13,20 +13,20 @@ beforeEach(() => {
 
 describe('the first start', () => {
   it('welcomes a new person, with nothing to catch up on', () => {
-    settleFirstRun(false, '2.1.0');
-    expect(useSettings.getState()).toMatchObject({ welcomeDone: false, seenVersion: '2.1.0' });
+    settleFirstRun(false, app.expo.version);
+    expect(useSettings.getState()).toMatchObject({ welcomeDone: false, seenVersion: app.expo.version });
     expect(releasesSince(useSettings.getState().seenVersion)).toEqual([]);
   });
 
   it('shows someone who used Quits before what changed, without the welcome', () => {
-    settleFirstRun(true, '2.1.0');
+    settleFirstRun(true, app.expo.version);
     expect(useSettings.getState()).toMatchObject({ welcomeDone: true, seenVersion: FIRST_TRACKED });
     expect(releasesSince(FIRST_TRACKED).map((release) => release.version)).toEqual(RELEASES.map((release) => release.version));
   });
 
   it('happens once: what was recorded stays', () => {
     useSettings.setState({ seenVersion: '2.0.0' });
-    settleFirstRun(false, '2.1.0');
+    settleFirstRun(false, app.expo.version);
     expect(useSettings.getState().seenVersion).toBe('2.0.0');
   });
 });
@@ -38,7 +38,9 @@ describe('the release notes', () => {
   });
 
   it('list only what’s newer than the version last seen', () => {
-    expect(releasesSince('2.0.0').map((release) => release.version)).toEqual(['2.1.0']);
+    expect(releasesSince(RELEASES[1].version).map((release) => release.version)).toEqual([RELEASES[0].version]);
+    expect(releasesSince('2.0.0').map((release) => release.version)).toContain('2.1.0');
+    expect(releasesSince('2.0.0').map((release) => release.version)).not.toContain('2.0.0');
     expect(releasesSince(RELEASES[0].version)).toEqual([]);
     expect(releasesSince(null)).toEqual([]);
   });

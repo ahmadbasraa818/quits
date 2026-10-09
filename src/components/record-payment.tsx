@@ -14,6 +14,7 @@ import { Button } from './button';
 import { DateField } from './calendar';
 import { Chip } from './chip';
 import { Field } from './field';
+import { success } from './haptics';
 import { SectionLabel } from './layout';
 import { Sheet } from './sheet';
 import { Text } from './text';
@@ -70,6 +71,7 @@ export function RecordPayment({ group, visible, draft, onClose }: { group: Group
   const save = () => {
     if (problem || !amount) return;
     const id = recordPayment(group.id, { from, to, amount, date, note: note.trim() || undefined });
+    success();
     showToast(`Recorded ${formatMoney(amount, group.currency)} from ${nameInSentence(group, from)} to ${nameInSentence(group, to)}`, {
       label: 'Undo',
       onPress: () => removePayment(group.id, id),

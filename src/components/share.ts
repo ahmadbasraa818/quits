@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import { Platform, Share } from 'react-native';
 
 export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'failed';
@@ -32,4 +33,14 @@ export async function shareText(text: string): Promise<ShareResult> {
   } catch {
     return 'failed';
   }
+}
+
+/**
+ * Opens a pay link with the system, so the service's own app takes it where
+ * it's installed, and the browser where it isn't. (An in-app browser would
+ * keep it from the app.) On the web it opens in a new tab.
+ */
+export function openPayLink(url: string) {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener');
+  else Linking.openURL(url).catch(() => {});
 }

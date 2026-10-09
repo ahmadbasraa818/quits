@@ -1,7 +1,8 @@
 import { demoGroups } from '@/store/demo';
 import { summarise } from '@/store/summary';
 
-import { circlesExplanation, paymentLine, planText } from '../plan-text';
+import { circlesExplanation, paymentLine, planText, reminderText } from '../plan-text';
+import type { Group } from '../types';
 
 const [japan] = demoGroups(new Date(2026, 9, 4));
 
@@ -29,6 +30,46 @@ describe('the plan as a message', () => {
 
   it('leaves out a saving there isn’t', () => {
     expect(planText(japan, [{ from: 'aiko', to: 'you', amount: 100 }], 1)).toContain('\nOne payment, worked out with Quits');
+  });
+
+  it('gives a link to pay each person who has added one', () => {
+    const summary = summarise(japan);
+    const text = planText(paid(japan), summary.settlement.transfers, summary.directCount);
+    expect(text).toContain('• Aiko pays Ben ¥116,395\n  Pay Ben: https://paypal.me/bensmith/116395JPY\n');
+    expect(text).toContain('• Dev pays me ¥20,305\n  Pay me: https://revolut.me/ahmad\n');
+  });
+});
+
+/** The Japan trip with ways to pay: Ben on PayPal and Monzo, you on Revolut. */
+const paid = (group: Group): Group => ({
+  ...group,
+  members: group.members.map((member) =>
+    member.id === 'ben'
+      ? { ...member, pay: [{ kind: 'paypal', handle: 'bensmith' }, { kind: 'monzo', handle: 'ben' }] }
+      : member.id === 'you'
+        ? { ...member, pay: [{ kind: 'revolut', handle: 'ahmad' }] }
+        : member
+  ),
+});
+
+describe('a reminder', () => {
+  it('says what someone owes, and who to', () => {
+    expect(reminderText(japan, { from: 'dev', to: 'you', amount: 20305 })).toBe(['Hi Dev, a quick reminder from Japan trip: you owe me ¥20,305.', '', 'Thanks!'].join('\n'));
+  });
+
+  it('gives every way to pay that person, asking for the amount where it can', () => {
+    expect(reminderText(paid(japan), { from: 'aiko', to: 'ben', amount: 116395 })).toBe(
+      [
+        'Hi Aiko, a quick reminder from Japan trip: you owe Ben ¥116,395.',
+        '',
+        'To pay Ben:',
+        'PayPal: https://paypal.me/bensmith/116395JPY',
+        // Monzo is in pounds, so the person paying types in the amount.
+        'Monzo: https://monzo.me/ben',
+        '',
+        'Thanks!',
+      ].join('\n')
+    );
   });
 });
 

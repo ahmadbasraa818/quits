@@ -1,6 +1,7 @@
 import type { CategoryId } from './categories';
 import type { Rate } from './fx';
 import type { CurrencyCode } from './money';
+import type { PayMethod } from './pay';
 import type { Split } from './split';
 
 export type Member = {
@@ -13,6 +14,8 @@ export type Member = {
    * of, and still in the balances, but no longer offered for new expenses.
    */
   left?: boolean;
+  /** How they get paid, in the order they'd like: shown to whoever owes them. */
+  pay?: PayMethod[];
 };
 
 /** What was actually paid, when it wasn't in the group's currency. */

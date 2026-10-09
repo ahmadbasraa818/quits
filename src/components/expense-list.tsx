@@ -17,6 +17,7 @@ import { SpendingStrip } from './charts/strip';
 import { Chip } from './chip';
 import { ExpenseRow } from './expense-row';
 import { Field } from './field';
+import { warning } from './haptics';
 import { Icon } from './icon';
 import { SectionLabel } from './layout';
 import { Text } from './text';
@@ -124,7 +125,10 @@ export function ExpenseList({ group, searchRef }: { group: Group; searchRef?: Re
                   onPress={() => router.push({ pathname: '/group/[id]/expense', params: { id: group.id, expenseId: expense.id } })}
                   onDelete={() => {
                     const removed = removeExpense(group.id, expense.id);
-                    if (removed) showToast(`Deleted ${removed.description}`, { label: 'Undo', onPress: () => restoreExpense(group.id, removed) });
+                    if (removed) {
+                      warning();
+                      showToast(`Deleted ${removed.description}`, { label: 'Undo', onPress: () => restoreExpense(group.id, removed) });
+                    }
                   }}
                 />
               </Animated.View>

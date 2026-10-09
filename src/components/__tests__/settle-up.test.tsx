@@ -1,12 +1,12 @@
 import { act, render, screen, userEvent, within } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
+import { demoGroups } from '@/store/demo';
 import { useGroups } from '@/store/groups';
 import { summarise } from '@/store/summary';
 
 import { SettleUp } from '../settle-up';
 import { ToastHost } from '../toast';
-import { demoGroups } from '@/store/demo';
 
 const japan = () => useGroups.getState().groups.find((group) => group.id === 'demo_japan')!;
 

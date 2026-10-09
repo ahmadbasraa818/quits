@@ -1,8 +1,8 @@
 import type { Group } from '@/lib/types';
 
+import { demoGroups } from '../demo';
 import { useGroups } from '../groups';
 import { summarise } from '../summary';
-import { demoGroups } from '../demo';
 
 const japan = () => useGroups.getState().groups.find((group) => group.id === 'demo_japan')!;
 
@@ -157,5 +157,29 @@ describe('editing a group', () => {
     useGroups.getState().restoreGroup(deleted!.group, deleted!.index);
     expect(useGroups.getState().groups.map((group) => group.id)).toEqual(['demo_japan', 'demo_flat', 'demo_brighton']);
     expect(useGroups.getState().deleteGroup('nope')).toBeUndefined();
+  });
+});
+
+describe('how people get paid', () => {
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
+  const ben = () => japan().members.find((member) => member.id === 'ben')!;
+  const paypal = { kind: 'paypal', handle: 'bensmith' } as const;
+
+  it('is set for one person, and can be undone', () => {
+    expect(useGroups.getState().setPayMethods('demo_japan', 'ben', [paypal])).toEqual([]);
+    expect(ben().pay).toEqual([paypal]);
+    expect(japan().members.filter((member) => member.pay)).toHaveLength(1);
+    const before = useGroups.getState().setPayMethods('demo_japan', 'ben', []);
+    expect(ben()).not.toHaveProperty('pay');
+    useGroups.getState().setPayMethods('demo_japan', 'ben', before);
+    expect(ben().pay).toEqual([paypal]);
+  });
+
+  it('stays through editing the group, and goes with a shared copy', () => {
+    useGroups.getState().setPayMethods('demo_japan', 'ben', [paypal]);
+    const group = japan();
+    useGroups.getState().editGroup('demo_japan', { name: 'Japan 2026', currency: group.currency, members: group.members.map(({ id, name, left }) => ({ id, name, left })) });
+    expect(ben().pay).toEqual([paypal]);
+    expect(useGroups.getState().prepareShare('demo_japan', 'Ahmad')?.members.find((member) => member.id === 'ben')?.pay).toEqual([paypal]);
   });
 });

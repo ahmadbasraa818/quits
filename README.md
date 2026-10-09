@@ -35,7 +35,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 326 unit, property and component tests and 94 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 369 unit, property and component tests and 100 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -51,6 +51,9 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 
 - **In the fewest payments.** The demo's five-person Japan trip settles in 4 payments instead of the 10 it would take pair by pair. Switch between the two and the arrows redraw, so you watch the saving happen.
 - **Record payments as they happen:** a whole payment with a tap, part of one, or one made outside the plan, with a history you can undo. Share the plan with the group as a message.
+- **Pay in a tap.** Add how anyone gets paid (PayPal, Monzo, Revolut, Venmo, Cash App or any pay link), and whoever owes them gets a button that opens the service, in its app where it's installed, with the amount filled in where the service allows: PayPal in the currencies it takes, Monzo in pounds and Venmo in US dollars. A pasted link works as well as a username.
+- **Remind, kindly.** Remind sends whoever owes a friendly message with what they owe and the links to pay, through the share sheet, and Quits remembers when you last did. The shared plan carries the links too, and so does a shared copy of the group.
+- **Feel it on a phone:** a light tap for each press and a firmer one when a payment or an expense is saved, which can be turned off.
 
 **See where the money went**
 
@@ -220,6 +223,7 @@ Quits has no backend: groups live on the device. To share one, [`shareLink`](src
 - **Opening a link:** the receiver says which person they are and gets a copy of their own.
 - **Recognising copies:** a group gets a random origin id the first time it's shared, and copies carry it. Opening a newer link updates the copy instead of duplicating it. Ids alone wouldn't do, because every visitor's demo trip is `demo_japan`; that was caught by an end-to-end test where a friend with the demo opened the sharer's link.
 - **Safety:** nothing from outside is trusted. Links unpack a piece at a time and stop at a size limit, so a crafted link can't expand without bound. [`validateGroup`](src/lib/validate.ts) then checks every field's type and range, that splits only name people in the group, and that "you" is one of them, before anything is saved.
+- **Pay links:** how people get paid travels with the group, so a link from outside could carry anything. [`parsePayMethod`](src/lib/pay.ts) keeps a username to letters, digits, dots, dashes and underscores, and any other pay link to https with nothing that could end the link early. A way to pay from outside must already be in exactly that form, so a crafted group can't make a button that runs a script or opens anything but https.
 - **Backups:** these are JSON files with a version. Restoring one runs the same migrations and checks as everything else.
 
 ## How it’s built
@@ -250,11 +254,12 @@ Each layer can use any layer below it, never one above. The logic in `src/lib` h
 
 ```
 src/
-  app/          screens: the groups, a group, an expense, a person's statement, spending, settings, import
-  components/   sheets, charts, the settle-up graph, the item editor, quick add, toasts
+  app/          screens: the groups, a group, an expense, a person's statement, spending, settings,
+                import, help, about and privacy
+  components/   sheets, charts, the settle-up graph, the item editor, quick add, pay links, toasts, haptics
   lib/          the logic, with no React in it: money, splits, balances, settling up, conversion,
-                quick add, sums, share links, validation and the graph's layout
-  store/        the persisted store, migrations, backups, the demo data and cached rates
+                quick add, sums, share links, pay links, help, validation and the graph's layout
+  store/        the persisted store, settings, migrations, backups, the demo data and cached rates
   theme/        colours for light and dark, type and spacing
 e2e/            Playwright tests against the web build
 scripts/        icons, the web export and its service worker, screenshots
@@ -262,8 +267,8 @@ scripts/        icons, the web export and its service worker, screenshots
 
 ## Quality
 
-- **326 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **94 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **369 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **100 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;
@@ -274,8 +279,9 @@ scripts/        icons, the web export and its service worker, screenshots
   - set aside saved data that can't be read, open the sound groups beside a damaged one, and warn when the browser won't save;
   - search the help and follow an answer to the right screen, open an answer from a “?”, welcome someone new, tell someone back after an update what's new once, and drive a group from the keyboard;
   - reset or remove the demo groups while keeping the person's own;
-  - and run axe accessibility scans of twenty screens and sheets in light and dark mode.
-- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back have been run on iOS, in Expo Go on the simulator.
+  - add how someone gets paid from a pasted link, and pay them with the amount filled in; remind someone with the link to pay you, remembered after a reload; and pay from a friend's copy of a shared group;
+  - and run axe accessibility scans of twenty-one screens and sheets in light and dark mode.
+- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
 ## Run it

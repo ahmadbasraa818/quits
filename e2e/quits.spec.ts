@@ -11,6 +11,23 @@ const openGroup = async (page: Page, name: string) => {
 
 const tab = (page: Page, name: string) => page.getByRole('tab', { name });
 
+/** Opens Quits, once, as someone who already has these groups and has seen what's new. */
+const seedGroups = (page: Page, groups: unknown[]) =>
+  page.addInitScript(
+    ([saved, settings]) => {
+      if (!sessionStorage.getItem('seeded')) {
+        localStorage.setItem('quits', saved);
+        localStorage.setItem('quits-settings', settings);
+        sessionStorage.setItem('seeded', 'yes');
+      }
+    },
+    [JSON.stringify({ state: { groups }, version: 3 }), JSON.stringify({ state: { welcomeDone: true, seenVersion: app.expo.version }, version: 0 })]
+  );
+
+/** Pay links open the service's own site; tests get a stand-in, so nothing reaches it. */
+const PAY_SITES = /^https:\/\/(paypal|monzo|revolut)\.me\//;
+const standIn = { contentType: 'text/html', body: '<title>Pay</title>' };
+
 test('shows what you are owed across the demo groups', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Quits', exact: true })).toBeVisible();
@@ -452,7 +469,7 @@ test.describe('sharing a copy', () => {
     const fragment = link.split('#')[1];
 
     // The friend's own browser, with nothing of the sharer's in it.
-    const friend = await browser.newContext({ baseURL: 'http://localhost:4173/quits/', serviceWorkers: 'block' });
+    const friend = await browser.newContext({ baseURL: test.info().project.use.baseURL, serviceWorkers: 'block' });
     const theirs = await friend.newPage();
     await theirs.goto(`import#${fragment}`);
     await expect(theirs.getByText('Shared by Ahmad')).toBeVisible();
@@ -602,6 +619,97 @@ test('answers a shared link with a preview, not a 404', async ({ request }) => {
   expect((await request.get('og.png')).status()).toBe(200);
 });
 
+test.describe('getting paid', () => {
+  /** A weekend where Rui paid for dinner: you and Ana each owe him €30. */
+  const lisbon = {
+    id: 'g_lisbon',
+    name: 'Lisbon weekend',
+    currency: 'EUR',
+    me: 'you',
+    createdAt: 1,
+    members: [
+      { id: 'you', name: 'You', tone: 0 },
+      { id: 'rui', name: 'Rui', tone: 2 },
+      { id: 'ana', name: 'Ana', tone: 4 },
+    ],
+    expenses: [{ id: 'e1', description: 'Dinner', amount: 9000, paidBy: 'rui', split: { kind: 'equal', among: ['you', 'rui', 'ana'] }, category: 'food', date: '2026-10-08', createdAt: 1 }],
+    payments: [],
+  };
+
+  test.beforeEach(async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await context.route(PAY_SITES, (route) => route.fulfill(standIn));
+    // No share sheet, so messages are copied, and can be read back here.
+    await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined }));
+  });
+
+  test('pays someone the way they get paid, with the amount filled in', async ({ page }) => {
+    await seedGroups(page, [lisbon]);
+    await page.goto('group/g_lisbon?tab=settle');
+    await page.getByRole('button', { name: 'How does Rui get paid?' }).click();
+    // Rui's page, ready to add one.
+    await expect(page.getByTestId('pay-sheet')).toBeVisible();
+    await page.getByTestId('pay-handle').fill('https://www.paypal.me/RuiCosta/10EUR');
+    await expect(page.getByTestId('pay-preview')).toHaveText('Opens paypal.me/RuiCosta. The amount is filled in, in any currency PayPal takes.');
+    await page.getByTestId('save-pay').click();
+    await expect(page.getByLabel('PayPal: paypal.me/RuiCosta', { exact: true })).toBeVisible();
+
+    await page.goBack();
+    await expect(page.getByTestId('settle-headline')).toHaveText('2 payments settle everyone');
+    const popup = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Pay with PayPal' }).click();
+    expect((await popup).url()).toBe('https://paypal.me/RuiCosta/30.00EUR');
+    await page.getByTestId('pay-you-rui').click();
+    await expect(page.getByTestId('settle-headline')).toHaveText('One payment settles everyone');
+  });
+
+  test('reminds someone what they owe, with the link to pay you', async ({ page }) => {
+    await page.goto('group/demo_japan/member/you');
+    await page.getByTestId('add-pay').click();
+    await page.getByRole('radio', { name: 'Revolut' }).click();
+    await page.getByTestId('pay-handle').fill('@ahmadb');
+    await page.getByTestId('save-pay').click();
+    await expect(page.getByLabel('Revolut: revolut.me/ahmadb', { exact: true })).toBeVisible();
+
+    await page.goto('group/demo_japan?tab=settle');
+    await page.getByTestId('remind-dev-you').click();
+    await expect(page.getByText('Reminder copied, ready to paste')).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      ['Hi Dev, a quick reminder from Japan trip: you owe me ¥20,305.', '', 'To pay me:', 'Revolut: https://revolut.me/ahmadb', '', 'Thanks!'].join('\n')
+    );
+    await expect(page.getByTestId('reminded-dev-you')).toHaveText('Reminded today');
+    await page.reload();
+    await expect(page.getByTestId('reminded-dev-you')).toHaveText('Reminded today');
+  });
+
+  test('a friend’s copy pays you the way you get paid', async ({ page, browser }) => {
+    await page.goto('group/demo_japan/member/you?pay=add');
+    await page.getByTestId('pay-handle').fill('ahmadb');
+    await page.getByTestId('save-pay').click();
+    await expect(page.getByLabel('PayPal: paypal.me/ahmadb', { exact: true })).toBeVisible();
+    await page.goto('group/demo_japan');
+    await page.getByTestId('share-group').click();
+    await page.getByTestId('my-name').fill('Ahmad');
+    await page.getByTestId('share-link').click();
+    await expect(page.getByText('Link copied, ready to send')).toBeVisible();
+    const fragment = (await page.evaluate(() => navigator.clipboard.readText())).match(/#(\S+)/)![1];
+
+    // Dev opens the link in their own browser, and pays from their copy.
+    const friend = await browser.newContext({ baseURL: test.info().project.use.baseURL, serviceWorkers: 'block' });
+    await friend.route(PAY_SITES, (route) => route.fulfill(standIn));
+    const theirs = await friend.newPage();
+    await theirs.goto(`import#${fragment}`);
+    await theirs.getByTestId('me-dev').click();
+    await theirs.getByTestId('add-copy').click();
+    await tab(theirs, 'Settle up').click();
+    await expect(theirs.getByRole('button', { name: 'You pay Ahmad ¥20,305' })).toBeVisible();
+    const popup = theirs.waitForEvent('popup');
+    await theirs.getByRole('button', { name: 'Pay with PayPal' }).click();
+    expect((await popup).url()).toBe('https://paypal.me/ahmadb/20305JPY');
+    await friend.close();
+  });
+});
+
 test.describe('help', () => {
   test('answers a question, and shows where to do it', async ({ page, request }) => {
     // A support link to the help answers 200, not GitHub Pages' 404 fallback.
@@ -724,7 +832,7 @@ test('opens a deep link straight to a group', async ({ page }) => {
 test.describe('accessibility', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`has no axe violations on the main screens in ${scheme} mode`, async ({ page }) => {
-      // Sixteen scans take about 30 seconds on CI, the default limit.
+      // Twenty-one scans take longer on CI than the default limit allows.
       test.slow();
       // Scan settled screens, not frames of a fade: ask for reduced motion, as some visitors do.
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
@@ -777,6 +885,9 @@ test.describe('accessibility', () => {
       await scan('spending');
       await page.goto('group/demo_japan/member/aiko');
       await scan('statement');
+      await page.goto('group/demo_japan/member/you?pay=add');
+      await page.getByTestId('pay-handle').fill('ahmadb');
+      await scan('add how you get paid');
       await page.goto('group/demo_japan/settings');
       await scan('group settings');
       await page.getByTestId('delete-group').click();

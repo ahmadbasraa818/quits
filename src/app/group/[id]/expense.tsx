@@ -9,6 +9,7 @@ import { Chip } from '@/components/chip';
 import { Conversion, PinnedRate } from '@/components/conversion';
 import { CurrencyPicker } from '@/components/currency-picker';
 import { Field } from '@/components/field';
+import { success, warning } from '@/components/haptics';
 import { Icon } from '@/components/icon';
 import { ItemDraft, ItemsEditor } from '@/components/items-editor';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
@@ -184,6 +185,7 @@ function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { grou
     const data = { description: description.trim(), amount: converted ?? 0, original, paidBy, split, category, date, note: note.trim() || undefined };
     if (expense) updateExpense(group.id, expense.id, data);
     else addExpense(group.id, data);
+    success();
     showToast(expense ? 'Expense updated' : `Added ${data.description}`);
     close();
   };
@@ -397,7 +399,10 @@ function ExpenseForm({ group, expense, draft = null, linkedKind = null }: { grou
                 label="Delete expense"
                 onPress={() => {
                   const removed = removeExpense(group.id, expense.id);
-                  if (removed) showToast(`Deleted ${removed.description}`, { label: 'Undo', onPress: () => restoreExpense(group.id, removed) });
+                  if (removed) {
+                    warning();
+                    showToast(`Deleted ${removed.description}`, { label: 'Undo', onPress: () => restoreExpense(group.id, removed) });
+                  }
                   close();
                 }}
               />

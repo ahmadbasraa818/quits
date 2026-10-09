@@ -6,7 +6,7 @@ import type { Group } from './types';
 /** Where a help answer's "Show me" goes: a screen, or a screen of a group. */
 export type HelpTarget =
   | { kind: 'route'; href: '/new-group' | '/about' | '/privacy' }
-  | { kind: 'group'; screen: 'expense' | 'items' | 'quick' | 'balances' | 'settle' | 'share' | 'spending' | 'statement' };
+  | { kind: 'group'; screen: 'expense' | 'items' | 'quick' | 'balances' | 'settle' | 'share' | 'spending' | 'statement' | 'pay' };
 
 export const TOPICS = [
   { id: 'start', title: 'Getting started' },
@@ -71,6 +71,16 @@ const ENTRIES = [
       'On the web, install Quits from your browser and it opens like an app, offline too.',
     ],
     keywords: ['internet', 'connection', 'install', 'app', 'pwa', 'home screen'],
+    show: { label: 'Open About', target: { kind: 'route', href: '/about' } },
+  },
+  {
+    id: 'haptics',
+    topic: 'start',
+    question: 'Can I turn off the taps I feel?',
+    answer: [
+      'On a phone, Quits gives a light tap when you press a button, and a firmer one when a payment or an expense is saved. Turn them off in About, under Preferences. Your phone’s own settings, such as Low Power Mode on an iPhone, can turn them off too.',
+    ],
+    keywords: ['haptics', 'vibrate', 'vibration', 'buzz', 'feedback', 'taptic'],
     show: { label: 'Open About', target: { kind: 'route', href: '/about' } },
   },
   {
@@ -156,6 +166,29 @@ const ENTRIES = [
       'Payments made lists every payment, and you can delete one there.',
     ],
     keywords: ['paid', 'payment', 'mark', 'record', 'repay', 'transfer', 'settled'],
+    show: { label: 'Open Settle up', target: { kind: 'group', screen: 'settle' } },
+  },
+  {
+    id: 'pay-links',
+    topic: 'settling',
+    question: 'How can people pay me from Quits?',
+    answer: [
+      'Open your page in a group (Balances, then tap You) and add how you get paid: PayPal, Monzo, Revolut, Venmo, Cash App, or a pay link of your own. Add how anyone else gets paid on their page.',
+      'Whoever owes that person then gets a button on Settle up that opens the service, with the amount filled in where it can be: PayPal in the currencies it takes, Monzo in pounds and Venmo in US dollars. Reminders, the shared plan and a shared copy of the group carry the link too.',
+      'Quits only makes the link: the money goes through the service. Once it’s sent, tap Mark paid.',
+    ],
+    keywords: ['paypal', 'monzo', 'revolut', 'venmo', 'cash app', 'cashapp', 'pay link', 'get paid', 'bank', 'username', 'paid back'],
+    show: { label: 'Add how you get paid', target: { kind: 'group', screen: 'pay' } },
+  },
+  {
+    id: 'remind',
+    topic: 'settling',
+    question: 'How do I remind someone to pay?',
+    answer: [
+      'On Settle up, tap Remind under a payment someone else makes. Quits writes a friendly message with what they owe and who to, with the links to pay where that person has added them, and opens your phone’s share sheet so you can send it however you like. On a computer the message is copied, ready to paste.',
+      'Quits notes when you last reminded them. It never sends anything itself.',
+    ],
+    keywords: ['remind', 'reminder', 'nudge', 'chase', 'message', 'text', 'late'],
     show: { label: 'Open Settle up', target: { kind: 'group', screen: 'settle' } },
   },
   {
@@ -299,5 +332,7 @@ export function hrefFor(target: HelpTarget, groups: Group[]): Href | null {
       const other = group.members.find((member) => member.id !== group.me);
       return other ? { pathname: '/group/[id]/member/[memberId]', params: { id, memberId: other.id } } : { pathname: '/group/[id]', params: { id, tab: 'balances' } };
     }
+    case 'pay':
+      return { pathname: '/group/[id]/member/[memberId]', params: { id, memberId: group.me, pay: 'add' } };
   }
 }

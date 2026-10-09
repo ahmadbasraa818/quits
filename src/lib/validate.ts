@@ -3,6 +3,7 @@ import { isValidDate } from './dates';
 import { parseRateValue } from './fx';
 import { MAX_MEMBERS } from './members';
 import { isCurrencyCode, MAX_AMOUNT } from './money';
+import { isPayMethod, MAX_PAY_METHODS } from './pay';
 import type { Group } from './types';
 
 /** The most expenses or payments a group brought in from outside may have. */
@@ -62,7 +63,15 @@ export function validateGroup(value: unknown, source: Source = 'outside'): Group
   if (!optional(value.updatedAt, isTime) || !optional(value.origin, isId)) return null;
   const { members, expenses, payments } = value;
   if (!Array.isArray(members) || members.length === 0 || members.length > cap(MAX_MEMBERS)) return null;
-  if (!members.every((member) => isShape(member) && isId(member.id) && isText(member.name, cap(24)) && Number.isSafeInteger(member.tone) && optional(member.left, (left) => typeof left === 'boolean'))) return null;
+  const goodPay = (pay: unknown) => Array.isArray(pay) && pay.length <= cap(MAX_PAY_METHODS) && pay.every(isPayMethod);
+  const goodMember = (member: unknown) =>
+    isShape(member) &&
+    isId(member.id) &&
+    isText(member.name, cap(24)) &&
+    Number.isSafeInteger(member.tone) &&
+    optional(member.left, (left) => typeof left === 'boolean') &&
+    optional(member.pay, goodPay);
+  if (!members.every(goodMember)) return null;
   const ids = new Set(members.map((member) => member.id as string));
   if (ids.size !== members.length || !ids.has(value.me as string)) return null;
   if (!Array.isArray(expenses) || expenses.length > cap(MAX_ENTRIES) || !Array.isArray(payments) || payments.length > cap(MAX_ENTRIES)) return null;

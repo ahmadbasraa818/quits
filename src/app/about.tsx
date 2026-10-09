@@ -1,22 +1,24 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, StyleSheet, Switch, View } from 'react-native';
 
+import { pickBackupFile, saveBackupFile } from '@/components/backup-file';
 import { Button } from '@/components/button';
+import { ConfirmDialog } from '@/components/confirm';
 import { appVersion, issueUrl, openLink } from '@/components/crash-screen';
-import { RELEASES, WhatsNew } from '@/components/whats-new';
+import { success } from '@/components/haptics';
 import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
-import { isAppleMobile, useInstall } from '@/lib/install';
-import { pickBackupFile, saveBackupFile } from '@/components/backup-file';
-import { ConfirmDialog } from '@/components/confirm';
+import { RELEASES, WhatsNew } from '@/components/whats-new';
 import { localDate } from '@/lib/dates';
+import { isAppleMobile, useInstall } from '@/lib/install';
 import type { Group } from '@/lib/types';
 import { fromBackup, toBackup } from '@/store/backup';
 import { isDemo, useGroups } from '@/store/groups';
+import { useSettings } from '@/store/settings';
 import { space, useTheme } from '@/theme';
 
 const SOURCE = 'https://github.com/ahmadbasraa818/quits';
@@ -148,6 +150,8 @@ export default function AboutScreen() {
   const replaceAll = useGroups((state) => state.replaceAll);
   const hasDemo = useGroups((state) => state.groups.some(isDemo));
   const showToast = useToast((state) => state.show);
+  const haptics = useSettings((state) => state.haptics);
+  const setHaptics = useSettings((state) => state.setHaptics);
   const [changes, setChanges] = useState(false);
   // Back to the groups already underneath, rather than stacking a second copy of them.
   const toGroups = () => {
@@ -192,6 +196,31 @@ export default function AboutScreen() {
 
         <SectionLabel help="backup">Your data</SectionLabel>
         <YourData />
+
+        {Platform.OS !== 'web' ? (
+          <>
+            <SectionLabel help="haptics">Preferences</SectionLabel>
+            <Card style={styles.point}>
+              <Icon name="vibrate" size={24} color={theme.ink} />
+              <View style={{ flex: 1, gap: space(1) }}>
+                <Text variant="bodyStrong">Haptics</Text>
+                <Text variant="body" tone="muted">
+                  A light tap when you press a button, and a firmer one when something is saved.
+                </Text>
+              </View>
+              <Switch
+                value={haptics}
+                onValueChange={(on) => {
+                  setHaptics(on);
+                  if (on) success();
+                }}
+                accessibilityLabel="Haptics"
+                trackColor={{ false: theme.line, true: theme.brand }}
+                testID="haptics-switch"
+              />
+            </Card>
+          </>
+        ) : null}
 
         <SectionLabel>Help and privacy</SectionLabel>
         <View style={styles.dataActions}>

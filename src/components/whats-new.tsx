@@ -15,6 +15,15 @@ export type Release = { version: string; title: string; items: { icon: IconName;
 /** What each release brought, newest first. The newest is always the app's own version. */
 export const RELEASES: Release[] = [
   {
+    version: '2.2.0',
+    title: 'Paid back sooner',
+    items: [
+      { icon: 'wallet', text: 'Add how people get paid (PayPal, Monzo, Revolut, Venmo, Cash App or a link) and pay from Settle up in a tap, with the amount filled in where the service allows.' },
+      { icon: 'paperPlaneTilt', text: 'Remind someone what they owe with a friendly message and the link to pay, sent however you like.' },
+      { icon: 'vibrate', text: 'A tap you can feel when a payment or an expense is saved, on a phone. Turn it off in About.' },
+    ],
+  },
+  {
     version: '2.1.0',
     title: 'Help when you need it',
     items: [
@@ -41,7 +50,8 @@ export function WhatsNew({ releases, visible, onClose }: { releases: Release[]; 
   const theme = useTheme();
   return (
     <Sheet visible={visible} onClose={onClose} title="What’s new" testID="whats-new" footer={<Button label="Got it" icon="check" onPress={onClose} testID="whats-new-done" />}>
-      <ScrollView contentContainerStyle={styles.body}>
+      {/* Focusable, so the notes can be scrolled from the keyboard when they run long. */}
+      <ScrollView contentContainerStyle={styles.body} focusable>
         {releases.map((release) => (
           <View key={release.version} style={styles.release}>
             <View>
