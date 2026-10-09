@@ -2,6 +2,7 @@ import type { CategoryId } from './categories';
 import type { Rate } from './fx';
 import type { CurrencyCode } from './money';
 import type { PayMethod } from './pay';
+import type { Repeat } from './repeat';
 import type { Split } from './split';
 
 export type Member = {
@@ -43,6 +44,8 @@ export type Expense = {
   /** Calendar date, YYYY-MM-DD. */
   date: string;
   note?: string;
+  /** Set on the newest of a repeating series: when the next comes due, it's added as a copy. */
+  repeat?: Repeat;
   createdAt: number;
   updatedAt?: number;
 };
@@ -75,4 +78,6 @@ export type Group = {
    * alone won't do: every visitor's demo trip has the same one.)
    */
   origin?: string;
+  /** Put away: kept, but out of the list and the totals until it's brought back. */
+  archived?: boolean;
 };

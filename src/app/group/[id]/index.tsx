@@ -7,6 +7,8 @@ import { BalanceBars } from '@/components/balance-bars';
 import { Button, IconButton } from '@/components/button';
 import { ExpenseList } from '@/components/expense-list';
 import { useSplitView } from '@/components/group-list';
+import { success } from '@/components/haptics';
+import { Icon } from '@/components/icon';
 import { Screen, Scroll, TopBar } from '@/components/layout';
 import { Money } from '@/components/money';
 import { QuickAdd } from '@/components/quick-add';
@@ -15,9 +17,10 @@ import { SettleUp } from '@/components/settle-up';
 import { ShareCopy } from '@/components/share-copy';
 import { useShortcuts } from '@/components/shortcuts';
 import { Text } from '@/components/text';
+import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
 import { formatMoney } from '@/lib/money';
-import { useGroup } from '@/store/groups';
+import { useGroup, useGroups } from '@/store/groups';
 import { useSummary } from '@/store/summary';
 import { radius, space, useTheme } from '@/theme';
 
@@ -38,6 +41,8 @@ export default function GroupScreen() {
   const [tab, setTab] = useState<Tab>(() => (TABS.some((item) => item.value === linkedTab) ? (linkedTab as Tab) : 'expenses'));
   const [quick, setQuick] = useState(open === 'quick');
   const [sharing, setSharing] = useState(open === 'share');
+  const setArchived = useGroups((state) => state.setArchived);
+  const showToast = useToast((state) => state.show);
   const split = useSplitView();
   // Two labelled buttons need about 400 points; below that, quick add is its wand alone.
   const roomy = useWindowDimensions().width >= 400;
@@ -114,6 +119,25 @@ export default function GroupScreen() {
             </Text>
           </View>
         </View>
+        {group.archived ? (
+          <View style={[styles.archived, { backgroundColor: theme.sunken }]} testID="archived-banner">
+            <Icon name="archive" size={18} color={theme.inkMuted} />
+            <Text variant="label" tone="muted" style={styles.archivedText}>
+              Archived, so it’s out of your list and totals.
+            </Text>
+            <Button
+              compact
+              variant="ghost"
+              label="Bring back"
+              testID="unarchive-banner"
+              onPress={() => {
+                setArchived(group.id, false);
+                success();
+                showToast(`${group.name} is back in your groups`);
+              }}
+            />
+          </View>
+        ) : null}
         <Segmented label="Group sections" options={TABS} value={tab} onChange={setTab} />
         <View style={styles.tab}>
           {tab === 'expenses' ? <ExpenseList group={group} searchRef={searchRef} /> : null}
@@ -133,6 +157,8 @@ const styles = StyleSheet.create({
   add: { flex: 3 },
   header: { alignItems: 'center', gap: space(1.5), paddingTop: space(2), paddingBottom: space(5) },
   pill: { borderRadius: radius.pill, paddingVertical: space(1.5), paddingHorizontal: space(3.5), marginTop: space(2) },
+  archived: { flexDirection: 'row', alignItems: 'center', gap: space(2), borderRadius: radius.md, paddingLeft: space(3), paddingRight: space(1.5), paddingVertical: space(1.5), marginBottom: space(4) },
+  archivedText: { flex: 1 },
   tab: { paddingTop: space(2) },
   empty: { alignItems: 'center', gap: space(3), paddingVertical: space(12), paddingHorizontal: space(6) },
 });

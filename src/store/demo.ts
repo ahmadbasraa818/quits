@@ -1,24 +1,29 @@
 import { daysAgo } from '@/lib/dates';
 import { convert, Rate } from '@/lib/fx';
+import { repeatFrom, type RepeatEvery } from '@/lib/repeat';
 import type { Expense, Group, Payment } from '@/lib/types';
 
 /**
  * The demo changes with the app, in step with the saved data's version: 2
- * added JR Passes paid in pounds to the Japan trip, 3 an itemised bill.
+ * added JR Passes paid in pounds to the Japan trip, 3 an itemised bill, 4
+ * the flat's broadband repeating every month.
  */
-export const DEMO_VERSION = 3;
+export const DEMO_VERSION = 4;
 
-/** An expense `days` ago, and the demo version that first had it. */
-type Draft = Omit<Expense, 'id' | 'createdAt' | 'date'> & { days: number; since?: number };
+/** An expense `days` ago, the demo version that first had it, and how often it repeats, from which version. */
+type Draft = Omit<Expense, 'id' | 'createdAt' | 'date' | 'repeat'> & { days: number; since?: number; repeats?: { every: RepeatEvery; since: number } };
 type PaymentDraft = Omit<Payment, 'id' | 'createdAt' | 'date'> & { days: number };
 
 function build(prefix: string, base: Omit<Group, 'expenses' | 'payments'>, drafts: Draft[], payments: PaymentDraft[], now: Date, version: number): Group {
   return {
     ...base,
     // Ids come from each draft's place in the full list, so they stay the same in every version.
-    expenses: drafts.flatMap(({ days, since = 1, ...draft }, index) =>
-      since > version ? [] : [{ ...draft, id: `${prefix}_e${index}`, date: daysAgo(days, now), createdAt: now.getTime() - days * 86_400_000 + index }]
-    ),
+    expenses: drafts.flatMap(({ days, since = 1, repeats, ...draft }, index) => {
+      if (since > version) return [];
+      const date = daysAgo(days, now);
+      const repeat = repeats && repeats.since <= version ? { repeat: repeatFrom(repeats.every, date) } : {};
+      return [{ ...draft, ...repeat, id: `${prefix}_e${index}`, date, createdAt: now.getTime() - days * 86_400_000 + index }];
+    }),
     payments: payments.map(({ days, ...payment }, index) => ({
       ...payment,
       id: `${prefix}_p${index}`,
@@ -111,7 +116,15 @@ export function demoGroups(now = new Date(), version = DEMO_VERSION): Group[] {
     },
     [
       { days: 12, description: 'Energy bill', amount: 14230, paidBy: 'you', category: 'bills', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },
-      { days: 10, description: 'Broadband', amount: 3200, paidBy: 'sam', category: 'bills', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },
+      {
+        days: 10,
+        description: 'Broadband',
+        amount: 3200,
+        paidBy: 'sam',
+        category: 'bills',
+        split: { kind: 'equal', among: ['you', 'sam', 'priya'] },
+        repeats: { every: 'month', since: 4 },
+      },
       { days: 6, description: 'Big shop', amount: 8645, paidBy: 'priya', category: 'shopping', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },
       { days: 4, description: 'Cleaning things', amount: 1820, paidBy: 'you', category: 'home', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },
       { days: 1, description: 'Pizza night', amount: 3660, paidBy: 'priya', category: 'food', split: { kind: 'equal', among: ['you', 'sam', 'priya'] } },

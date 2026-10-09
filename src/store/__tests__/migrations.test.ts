@@ -5,8 +5,15 @@ const jrPass = (groups: { id: string; expenses: { description: string }[] }[]) =
   groups.find((group) => group.id === 'demo_japan')?.expenses.some((expense) => expense.description === 'JR Passes, bought at home');
 
 describe('migrating saved data', () => {
-  it('is at version 3', () => {
-    expect(STORE_VERSION).toBe(3);
+  it('is at version 4', () => {
+    expect(STORE_VERSION).toBe(4);
+  });
+
+  it('gives a version 3 demo no one touched the broadband that repeats', () => {
+    const saved = { groups: demoGroups(new Date(2026, 0, 15), 3) };
+    const broadband = (groups: typeof saved.groups) => groups.find((group) => group.id === 'demo_flat')!.expenses.find((expense) => expense.description === 'Broadband')!;
+    expect(broadband(saved.groups).repeat).toBeUndefined();
+    expect(broadband(migrate(saved, 3).groups).repeat).toMatchObject({ every: 'month' });
   });
 
   it('gives a version 2 demo no one touched the itemised bill too', () => {
@@ -53,6 +60,6 @@ describe('migrating saved data', () => {
 
   it('leaves current data alone', () => {
     const saved = { groups: demoGroups(new Date(2026, 0, 15)) };
-    expect(migrate(saved, 3).groups).toBe(saved.groups);
+    expect(migrate(saved, STORE_VERSION).groups).toBe(saved.groups);
   });
 });

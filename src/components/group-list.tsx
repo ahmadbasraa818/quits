@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -66,6 +67,42 @@ export function GroupCard({ group, index, selected = false, split = false }: { g
   );
 }
 
+/** The groups in use, and those put away: archived ones stay out of the list and the totals. */
+export function splitArchived(groups: Group[]): { active: Group[]; archived: Group[] } {
+  return { active: groups.filter((group) => !group.archived), archived: groups.filter((group) => group.archived) };
+}
+
+/** Archived groups, folded away under the rest until asked for. Open from the start when one of them is open. */
+export function ArchivedGroups({ groups, split = false, selected }: { groups: Group[]; split?: boolean; selected?: string }) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(() => groups.some((group) => group.id === selected));
+  if (groups.length === 0) return null;
+  return (
+    <View style={styles.archived}>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`Archived groups, ${groups.length}`}
+        onPress={() => setOpen(!open)}
+        style={styles.archivedToggle}
+        testID="toggle-archived"
+      >
+        <Icon name={open ? 'caretDown' : 'caretRight'} size={16} color={theme.inkMuted} />
+        <Text variant="label" tone="muted">
+          Archived ({groups.length})
+        </Text>
+      </PressableScale>
+      {open ? (
+        <View style={styles.archivedList}>
+          {groups.map((group, index) => (
+            <GroupCard key={group.id} group={group} index={index} split={split} selected={group.id === selected} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /** What you are owed or owe across every group, one line per currency. */
 export function Overview({ groups }: { groups: Group[] }) {
   const theme = useTheme();
@@ -101,4 +138,7 @@ const styles = StyleSheet.create({
   groupCard: { gap: space(1.5) },
   groupTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space(2) },
   status: { flexDirection: 'row', alignItems: 'center', gap: space(1.5), marginTop: space(2) },
+  archived: { marginTop: space(5), gap: space(3) },
+  archivedToggle: { flexDirection: 'row', alignItems: 'center', gap: space(1.5), minHeight: 44, alignSelf: 'flex-start', paddingRight: space(2) },
+  archivedList: { gap: space(3) },
 });

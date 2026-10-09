@@ -4,6 +4,7 @@ import { parseRateValue } from './fx';
 import { MAX_MEMBERS } from './members';
 import { isCurrencyCode, MAX_AMOUNT } from './money';
 import { isPayMethod, MAX_PAY_METHODS } from './pay';
+import { REPEAT_EVERY, type RepeatEvery } from './repeat';
 import type { Group } from './types';
 
 /** The most expenses or payments a group brought in from outside may have. */
@@ -27,6 +28,10 @@ const isTime = (value: unknown): value is number => Number.isSafeInteger(value) 
 const isDate = (value: unknown): value is string => typeof value === 'string' && isValidDate(value);
 const optional = (value: unknown, check: (value: unknown) => boolean) => value === undefined || check(value);
 const categories = new Set<string>(CATEGORIES.map((category) => category.id));
+const isRepeat = (value: unknown) =>
+  isShape(value) &&
+  REPEAT_EVERY.includes(value.every as RepeatEvery) &&
+  optional(value.day, (day) => Number.isSafeInteger(day) && (day as number) >= 1 && (day as number) <= 31);
 
 function isSplit(value: unknown, members: Set<string>, cap: (limit: number) => number): boolean {
   if (!isShape(value)) return false;
@@ -60,7 +65,7 @@ function isSplit(value: unknown, members: Set<string>, cap: (limit: number) => n
 export function validateGroup(value: unknown, source: Source = 'outside'): Group | null {
   const cap = (limit: number) => (source === 'outside' ? limit : Infinity);
   if (!isShape(value) || !isId(value.id) || !isText(value.name, cap(40)) || !isCurrencyCode(value.currency) || !isTime(value.createdAt)) return null;
-  if (!optional(value.updatedAt, isTime) || !optional(value.origin, isId)) return null;
+  if (!optional(value.updatedAt, isTime) || !optional(value.origin, isId) || !optional(value.archived, (archived) => typeof archived === 'boolean')) return null;
   const { members, expenses, payments } = value;
   if (!Array.isArray(members) || members.length === 0 || members.length > cap(MAX_MEMBERS)) return null;
   const goodPay = (pay: unknown) => Array.isArray(pay) && pay.length <= cap(MAX_PAY_METHODS) && pay.every(isPayMethod);
@@ -87,6 +92,7 @@ export function validateGroup(value: unknown, source: Source = 'outside'): Group
     isTime(expense.createdAt) &&
     optional(expense.updatedAt, isTime) &&
     optional(expense.note, (note) => isText(note, cap(200))) &&
+    optional(expense.repeat, isRepeat) &&
     optional(
       expense.original,
       (original) =>

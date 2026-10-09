@@ -1,3 +1,4 @@
+import { addDays } from '@/lib/dates';
 import type { Group } from '@/lib/types';
 
 import { demoGroups } from '../demo';
@@ -181,5 +182,47 @@ describe('how people get paid', () => {
     useGroups.getState().editGroup('demo_japan', { name: 'Japan 2026', currency: group.currency, members: group.members.map(({ id, name, left }) => ({ id, name, left })) });
     expect(ben().pay).toEqual([paypal]);
     expect(useGroups.getState().prepareShare('demo_japan', 'Ahmad')?.members.find((member) => member.id === 'ben')?.pay).toEqual([paypal]);
+  });
+});
+
+describe('archiving', () => {
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
+
+  it('puts a group away and brings it back', () => {
+    useGroups.getState().setArchived('demo_japan', true);
+    expect(japan().archived).toBe(true);
+    useGroups.getState().setArchived('demo_japan', false);
+    expect(japan()).not.toHaveProperty('archived');
+  });
+
+  it('is the sharer’s own business: a copy from a link isn’t archived, and an update keeps yours', () => {
+    useGroups.getState().setArchived('demo_japan', true);
+    const id = useGroups.getState().importGroup(japan(), 'aiko');
+    const copy = () => useGroups.getState().groups.find((group) => group.id === id)!;
+    expect(copy().archived).toBeUndefined();
+    useGroups.getState().setArchived(id, true);
+    useGroups.getState().replaceGroup(id, { ...japan(), archived: undefined });
+    expect(copy().archived).toBe(true);
+  });
+});
+
+describe('repeating expenses', () => {
+  beforeEach(() => useGroups.getState().replaceAll(demoGroups()));
+  const flat = () => useGroups.getState().groups.find((group) => group.id === 'demo_flat')!;
+
+  it('adds nothing, and saves nothing, when none are due', () => {
+    const before = useGroups.getState().groups;
+    expect(useGroups.getState().catchUpRepeats()).toBe(0);
+    expect(useGroups.getState().groups).toBe(before);
+  });
+
+  it('adds the flat’s broadband each month it comes due', () => {
+    const broadband = flat().expenses.find((expense) => expense.description === 'Broadband')!;
+    const inTwoMonths = addDays(broadband.date, 62);
+    expect(useGroups.getState().catchUpRepeats(inTwoMonths)).toBe(2);
+    const all = flat().expenses.filter((expense) => expense.description === 'Broadband');
+    expect(all).toHaveLength(3);
+    expect(all.filter((expense) => expense.repeat)).toHaveLength(1);
+    expect(useGroups.getState().catchUpRepeats(inTwoMonths)).toBe(0);
   });
 });

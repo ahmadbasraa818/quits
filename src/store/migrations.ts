@@ -5,7 +5,7 @@ import { demoGroups } from './demo';
 /** What the store saves: the groups, and nothing else. */
 export type Persisted = { groups: Group[] };
 
-export const STORE_VERSION = 3;
+export const STORE_VERSION = 4;
 
 /** What makes a group itself, without its ids, dates and timestamps, which the demo works out from today. */
 function content(group: Group): string {
@@ -13,8 +13,9 @@ function content(group: Group): string {
     name: group.name,
     currency: group.currency,
     members: group.members.map(({ id, name, tone, left, pay }) => [id, name, tone, left ?? false, pay ?? null]),
-    expenses: group.expenses.map(({ description, amount, paidBy, split, category, original, note }) => [description, amount, paidBy, split, category, original ?? null, note ?? null]),
+    expenses: group.expenses.map(({ description, amount, paidBy, split, category, original, note, repeat }) => [description, amount, paidBy, split, category, original ?? null, note ?? null, repeat ?? null]),
     payments: group.payments.map(({ from, to, amount }) => [from, to, amount]),
+    archived: group.archived ?? false,
   });
 }
 
@@ -22,7 +23,8 @@ function content(group: Group): string {
  * Brings what a visitor saved up to date with this version of the app.
  *
  * The saved data and the demo share a version: 2 gave the Japan trip JR
- * Passes bought in pounds, and 3 an itemised bill. Every demo expense
+ * Passes bought in pounds, 3 an itemised bill, and 4 the flat's broadband
+ * repeating every month. Every demo expense
  * records the version that added it, so the demo can be rebuilt exactly as
  * any version shipped it. A demo group still exactly that becomes today's
  * demo; anything the visitor changed is kept as it is.

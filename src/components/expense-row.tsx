@@ -3,6 +3,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 
 import { categoryOf } from '@/lib/categories';
 import { formatMoney } from '@/lib/money';
+import { repeatLabel } from '@/lib/repeat';
 import { expenseShares } from '@/lib/split';
 import type { Expense, Group } from '@/lib/types';
 import { radius, space, useTheme } from '@/theme';
@@ -55,7 +56,7 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
       <PressableScale
         testID={`expense-${expense.id}`}
         accessibilityRole="button"
-        accessibilityLabel={`${expense.description}, ${amountLabel}, paid by ${payer}, ${partText}`}
+        accessibilityLabel={`${expense.description}, ${amountLabel}, paid by ${payer}, ${partText}${expense.repeat ? `, repeats ${repeatLabel(expense.repeat).toLowerCase()}` : ''}`}
         accessibilityHint="Opens the expense to edit it"
         onPress={onPress}
         style={[styles.row, { backgroundColor: theme.card }]}
@@ -67,9 +68,13 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
           <Text variant="bodyStrong" numberOfLines={1}>
             {expense.description}
           </Text>
-          <Text variant="caption" tone="muted" numberOfLines={1}>
-            {payer === 'You' ? 'You paid' : `${payer} paid`}
-          </Text>
+          <View style={styles.paidLine}>
+            <Text variant="caption" tone="muted" numberOfLines={1} style={styles.paidText}>
+              {payer === 'You' ? 'You paid' : `${payer} paid`}
+              {expense.repeat ? ` · ${repeatLabel(expense.repeat).toLowerCase()}` : ''}
+            </Text>
+            {expense.repeat ? <Icon name="repeat" size={12} color={theme.inkMuted} /> : null}
+          </View>
         </View>
         <View style={styles.end}>
           <Text variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
@@ -85,6 +90,8 @@ export function ExpenseRow({ expense, group, onPress, onDelete }: { expense: Exp
 }
 
 const styles = StyleSheet.create({
+  paidLine: { flexDirection: 'row', alignItems: 'center', gap: space(1) },
+  paidText: { flexShrink: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3), paddingHorizontal: space(3) },
   tile: { width: 40, height: 40, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   middle: { flex: 1, gap: 2 },

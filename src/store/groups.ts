@@ -2,10 +2,12 @@ import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { persist, type PersistStorage } from 'zustand/middleware';
 
+import { daysAgo } from '@/lib/dates';
 import { createId } from '@/lib/ids';
 import { hasHistory, nextTone, tonesFor } from '@/lib/members';
 import type { CurrencyCode } from '@/lib/money';
 import type { PayMethod } from '@/lib/pay';
+import { catchUp } from '@/lib/repeat';
 import type { Expense, Group, Member, Payment } from '@/lib/types';
 import { validateGroup } from '@/lib/validate';
 
@@ -40,6 +42,10 @@ type GroupsState = {
   restorePayment: (groupId: string, payment: Payment) => void;
   /** Sets how someone gets paid. Returns how it was, to undo. */
   setPayMethods: (groupId: string, memberId: string, methods: PayMethod[]) => PayMethod[];
+  /** Puts a group away, out of the list and the totals, or brings it back. */
+  setArchived: (groupId: string, archived: boolean) => void;
+  /** Adds every repeating expense that has come due by today. Returns how many. */
+  catchUpRepeats: (today?: string) => number;
   /** Puts the demo groups back as they first were, keeping the person's own. Returns every group as it was, to undo. */
   resetDemo: () => Group[];
   /** Removes the demo groups, for someone ready to use Quits for real. Returns every group as it was, to undo. */
@@ -275,6 +281,28 @@ export const useGroups = create<GroupsState>()(
         return before ?? [];
       },
 
+      setArchived: (groupId, archived) =>
+        set({
+          groups: updateGroup(get().groups, groupId, (group) => {
+            const next: Group = { ...group, archived: true };
+            if (!archived) delete next.archived;
+            return next;
+          }),
+        }),
+
+      catchUpRepeats: (today = daysAgo(0)) => {
+        const now = Date.now();
+        let added = 0;
+        const groups = get().groups.map((group) => {
+          const result = catchUp(group, today, () => createId('e'), now);
+          added += result.added.length;
+          return result.group;
+        });
+        // Only when something came due: setting the store saves it, and nothing should be written on every start.
+        if (added > 0) set({ groups });
+        return added;
+      },
+
       resetDemo: () => {
         const before = get().groups;
         set({ groups: [...before.filter((group) => !isDemo(group)), ...demoGroups()] });
@@ -290,6 +318,8 @@ export const useGroups = create<GroupsState>()(
       importGroup: (shared, me) => {
         const id = createId('g');
         const copy: Group = { ...shared, id, me, origin: originOf(shared), updatedAt: Date.now() };
+        // Whether it's put away is the sharer's own business.
+        delete copy.archived;
         set({ groups: [copy, ...get().groups] });
         return id;
       },
@@ -302,6 +332,7 @@ export const useGroups = create<GroupsState>()(
             // Who you are stays as it was, as long as you're still in the group.
             me: shared.members.some((member) => member.id === local.me) ? local.me : shared.me,
             origin: local.origin,
+            archived: local.archived,
             updatedAt: Date.now(),
           })),
         }),

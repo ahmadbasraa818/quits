@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { saveTextFile } from '@/components/backup-file';
 import { Button, IconButton } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { ConfirmDialog } from '@/components/confirm';
@@ -13,10 +14,13 @@ import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { useLastDefined } from '@/hooks/use-last-defined';
+import { csvFileName, groupCsv } from '@/lib/csv';
+import { localDate } from '@/lib/dates';
 import { hasHistory, MAX_MEMBERS, namesProblem, nextTone } from '@/lib/members';
 import type { CurrencyCode } from '@/lib/money';
 import type { Group } from '@/lib/types';
 import { useGroup, useGroups } from '@/store/groups';
+import { summarise } from '@/store/summary';
 import { space } from '@/theme';
 
 type Person = { key: string; id?: string; name: string; left: boolean; history: boolean; tone: number };
@@ -27,6 +31,7 @@ function GroupSettings({ group }: { group: Group }) {
   const editGroup = useGroups((state) => state.editGroup);
   const deleteGroup = useGroups((state) => state.deleteGroup);
   const restoreGroup = useGroups((state) => state.restoreGroup);
+  const setArchived = useGroups((state) => state.setArchived);
   const showToast = useToast((state) => state.show);
   const [name, setName] = useState(group.name);
   const [currency, setCurrency] = useState<CurrencyCode>(group.currency);
@@ -60,6 +65,26 @@ function GroupSettings({ group }: { group: Group }) {
     showToast('Group updated');
     close();
   };
+
+  const archive = () => {
+    setArchived(group.id, true);
+    success();
+    router.dismissTo('/');
+    showToast(`Archived ${group.name}`, { label: 'Undo', onPress: () => setArchived(group.id, false) });
+  };
+  const bringBack = () => {
+    setArchived(group.id, false);
+    success();
+    showToast(`${group.name} is back in your groups`);
+  };
+  const exportCsv = async () => {
+    try {
+      await saveTextFile(csvFileName(group, localDate(new Date())), groupCsv(group), 'csv');
+    } catch {
+      showToast('Couldn’t save the spreadsheet');
+    }
+  };
+  const settled = summarise(group).settlement.transfers.length === 0;
 
   const remove = () => {
     setConfirming(false);
@@ -155,6 +180,26 @@ function GroupSettings({ group }: { group: Group }) {
               People with expenses or payments can’t be removed, so the history stays true. Mark them as left instead.
             </Text>
           )}
+
+          <SectionLabel help="csv">Export</SectionLabel>
+          <Button variant="secondary" icon="fileCsv" label="Export as a spreadsheet" onPress={exportCsv} testID="export-csv" />
+          <Text variant="caption" tone="muted" style={styles.caption}>
+            Every expense and payment as a CSV file, with what each did to everyone’s balance.
+          </Text>
+
+          <SectionLabel help="archive">Archive</SectionLabel>
+          {group.archived ? (
+            <Button variant="secondary" icon="arrowUUpLeft" label="Bring back to your groups" onPress={bringBack} testID="unarchive-group" />
+          ) : (
+            <Button variant="secondary" icon="archive" label="Archive group" onPress={archive} testID="archive-group" />
+          )}
+          <Text variant="caption" tone="muted" style={styles.caption} testID="archive-note">
+            {group.archived
+              ? 'It’s under Archived at the bottom of your groups, and out of the totals.'
+              : settled
+                ? 'Moves it under Archived at the bottom of your groups and out of the totals. Nothing is deleted.'
+                : 'There are still payments to settle. Archived, it moves out of your list and totals, and nothing is deleted.'}
+          </Text>
 
           <SectionLabel>Delete</SectionLabel>
           <Button variant="danger" icon="trash" label="Delete group" onPress={() => setConfirming(true)} testID="delete-group" />
