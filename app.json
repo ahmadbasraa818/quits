@@ -3,7 +3,7 @@
     "name": "Quits",
     "slug": "quits",
     "description": "Split shared costs with friends, and settle up in the fewest payments.",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "quits",

@@ -1,12 +1,12 @@
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
+import { demoGroups } from '@/store/demo';
 import { useDraft } from '@/store/draft';
 import { useGroups } from '@/store/groups';
 
 import { QuickAdd } from '../quick-add';
 import { ToastHost } from '../toast';
-import { demoGroups } from '@/store/demo';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 

@@ -23,7 +23,7 @@ beforeEach(async () => {
   mockParams = {};
   await act(async () => {
     useGroups.getState().replaceAll(demoGroups());
-    useSettings.setState({ welcomeDone: false, seenVersion: '2.1.0' });
+    useSettings.setState({ welcomeDone: false, seenVersion: RELEASES[0].version });
   });
 });
 

@@ -1,10 +1,10 @@
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 
 import type { Expense, Group } from '@/lib/types';
+import { demoGroups } from '@/store/demo';
 import { useGroups } from '@/store/groups';
 
 import { ExpenseList } from '../expense-list';
-import { demoGroups } from '@/store/demo';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 // Swiping is tested by hand and end to end; here the rows only need to render.

@@ -7,14 +7,14 @@ import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { space } from '@/theme';
 
-const UPDATED = '4 October 2026';
+const UPDATED = '9 October 2026';
 const GITHUB_PRIVACY = 'https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement';
 
 const SECTIONS: { heading: string; paragraphs: string[] }[] = [
   {
     heading: 'What Quits keeps',
     paragraphs: [
-      'Your groups: their names, the people in them, and every expense and payment. They’re kept on this device: in the app’s own storage on a phone, and in this browser’s storage for this site on the web.',
+      'Your groups: their names, the people in them, how anyone gets paid if you add it, and every expense and payment. They’re kept on this device: in the app’s own storage on a phone, and in this browser’s storage for this site on the web.',
       'Quits has no account and no server of its own, and it has no analytics, no adverts and no tracking.',
     ],
   },
@@ -22,7 +22,9 @@ const SECTIONS: { heading: string; paragraphs: string[] }[] = [
     heading: 'What leaves your device',
     paragraphs: [
       'Exchange rates. When an expense is in another currency and Quits looks up the rate, it asks frankfurter.dev for the European Central Bank’s rate between the two currencies on that day. The request carries the two currencies and the date, and nothing about your group. Like any request, it comes from your device’s internet address.',
-      'Share links, when you send one. The whole group travels inside the link, after the #. Browsers don’t send that part to any server, so the web host never sees it. Anyone who has the link can read the group, so send it only to the people in it.',
+      'Share links, when you send one. The whole group travels inside the link, after the #, with how anyone in it gets paid. Browsers don’t send that part to any server, so the web host never sees it. Anyone who has the link can read the group, so send it only to the people in it.',
+      'Pay links, when you tap one. It opens PayPal, Monzo, Revolut, Venmo, Cash App or the link someone added, in their app or website, with the username, the amount and the group’s name. From there the payment is between you and them, under their privacy policy. Quits tells them nothing else.',
+      'Reminders and plans, when you send one. Quits writes the message and hands it to your phone’s share sheet, or copies it on a computer. It goes wherever you send it, and Quits never sends anything itself.',
       'Backups and exports, where you choose to put them. Quits saves the file and goes no further.',
       'A problem report, if you send one. It opens a new issue on GitHub in your browser, filled in with the version of Quits and the error. You see everything before it’s sent, and it’s sent from your own GitHub account.',
     ],
