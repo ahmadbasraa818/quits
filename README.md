@@ -35,7 +35,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 326 unit, property and component tests and 93 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 326 unit, property and component tests and 94 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -263,7 +263,7 @@ scripts/        icons, the web export and its service worker, screenshots
 ## Quality
 
 - **326 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **93 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **94 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;

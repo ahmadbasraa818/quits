@@ -20,7 +20,10 @@ export function Sidebar() {
     <View role="navigation" aria-label="Your groups" style={[styles.sidebar, { borderRightColor: theme.line, paddingTop: insets.top }]} testID="sidebar">
       <View style={styles.top}>
         <Text style={[styles.brand, { color: theme.ink }]}>Quits</Text>
-        <IconButton icon="info" label="About Quits" onPress={() => router.push('/about')} />
+        <View style={styles.icons}>
+          <IconButton icon="question" label="Help" testID="open-help-sidebar" onPress={() => router.push('/help')} />
+          <IconButton icon="info" label="About Quits" onPress={() => router.push('/about')} />
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.list}>
         <Overview groups={groups} />
@@ -39,6 +42,7 @@ export function Sidebar() {
 }
 
 const styles = StyleSheet.create({
+  icons: { flexDirection: 'row', alignItems: 'center' },
   sidebar: { width: 360, borderRightWidth: StyleSheet.hairlineWidth },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space(5), paddingRight: space(2), minHeight: 64 },
   brand: { fontFamily: font.heavy, fontSize: 28, letterSpacing: -0.8 },

@@ -544,7 +544,9 @@ test.describe('looking after saved data', () => {
     const download = page.waitForEvent('download');
     await page.getByTestId('save-set-aside').click();
     expect((await download).suggestedFilename()).toMatch(/^quits-unreadable-\d{4}-\d{2}-\d{2}\.json$/);
-    const copy = JSON.parse(await page.evaluate(() => (window as unknown as { saved: string[] }).saved[0]));
+    // The file's text arrives a moment after the download starts.
+    const text = await page.waitForFunction(() => (window as unknown as { saved: string[] }).saved[0]);
+    const copy = JSON.parse(await text.jsonValue());
     expect(copy[0].data).toBe('{not json');
 
     await page.reload();
@@ -601,7 +603,9 @@ test('answers a shared link with a preview, not a 404', async ({ request }) => {
 });
 
 test.describe('help', () => {
-  test('answers a question, and shows where to do it', async ({ page }) => {
+  test('answers a question, and shows where to do it', async ({ page, request }) => {
+    // A support link to the help answers 200, not GitHub Pages' 404 fallback.
+    expect((await request.get('help')).status()).toBe(200);
     await page.goto('./');
     await page.getByTestId('open-help').click();
     await expect(page.getByRole('heading', { name: 'Help', exact: true })).toBeVisible();
@@ -647,6 +651,13 @@ test.describe('help', () => {
     await page.reload();
     await expect(page.getByTestId('new-group').first()).toBeVisible();
     await expect(page.getByTestId('whats-new')).toHaveCount(0);
+  });
+
+  test('is a click away beside an open group on a wide screen', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'The sidebar is for wide screens');
+    await page.goto('group/demo_japan');
+    await page.getByTestId('open-help-sidebar').click();
+    await expect(page.getByRole('heading', { name: 'Questions and answers' })).toBeVisible();
   });
 
   test('works from the keyboard on a computer', async ({ page }, testInfo) => {
