@@ -6,6 +6,7 @@ import { Avatar } from '@/components/avatar';
 import { Button, IconButton } from '@/components/button';
 import { CurrencyField } from '@/components/currency-picker';
 import { Field } from '@/components/field';
+import { success } from '@/components/haptics';
 import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { MAX_MEMBERS, namesProblem, tonesFor } from '@/lib/members';
@@ -35,6 +36,7 @@ export default function NewGroupScreen() {
           disabled={problem !== null}
           onPress={() => {
             const id = createGroup({ name: name.trim(), currency, memberNames: named });
+            success();
             router.replace({ pathname: '/group/[id]', params: { id } });
           }}
         />

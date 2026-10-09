@@ -18,6 +18,7 @@ import { radius, space, useTheme } from '@/theme';
 import { Avatar } from './avatar';
 import { Button } from './button';
 import { Field } from './field';
+import { success } from './haptics';
 import { Icon, IconName } from './icon';
 import { PressableScale } from './pressable-scale';
 import { Sheet } from './sheet';
@@ -99,6 +100,7 @@ export function QuickAdd({ group, visible, onClose }: { group: Group; visible: b
       category: draft.category,
       date: draft.date,
     });
+    success();
     showToast(`Added ${draft.description}`, { label: 'Undo', onPress: () => removeExpense(group.id, id) });
     close();
   };

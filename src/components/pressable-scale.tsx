@@ -1,6 +1,7 @@
-import { Platform, Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+
+import { tick } from './haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -18,7 +19,7 @@ export function PressableScale({
     <AnimatedPressable
       {...props}
       onPress={(event) => {
-        if (haptic && Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+        if (haptic) tick();
         onPress?.(event);
       }}
       onPressIn={(event) => {

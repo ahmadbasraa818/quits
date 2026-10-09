@@ -8,6 +8,7 @@ import { Chip } from '@/components/chip';
 import { ConfirmDialog } from '@/components/confirm';
 import { CurrencyField } from '@/components/currency-picker';
 import { Field } from '@/components/field';
+import { success, warning } from '@/components/haptics';
 import { Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
@@ -55,6 +56,7 @@ function GroupSettings({ group }: { group: Group }) {
       currency,
       members: [{ id: group.me, name: 'You' }, ...people.map((person) => ({ id: person.id, name: person.name, left: person.left }))],
     });
+    success();
     showToast('Group updated');
     close();
   };
@@ -63,7 +65,10 @@ function GroupSettings({ group }: { group: Group }) {
     setConfirming(false);
     router.dismissTo('/');
     const deleted = deleteGroup(group.id);
-    if (deleted) showToast(`Deleted ${deleted.group.name}`, { label: 'Undo', onPress: () => restoreGroup(deleted.group, deleted.index) });
+    if (deleted) {
+      warning();
+      showToast(`Deleted ${deleted.group.name}`, { label: 'Undo', onPress: () => restoreGroup(deleted.group, deleted.index) });
+    }
   };
 
   return (

@@ -7,6 +7,7 @@ import { Avatar, AvatarStack } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { useSplitView } from '@/components/group-list';
+import { success } from '@/components/haptics';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
@@ -55,6 +56,7 @@ function Import({ shared }: { shared: Group }) {
               testID="update-copy"
               onPress={() => {
                 replaceGroup(existing.id, shared);
+                success();
                 showToast(`Updated ${shared.name}`);
                 open(existing.id);
               }}
@@ -70,6 +72,7 @@ function Import({ shared }: { shared: Group }) {
             onPress={() => {
               if (!me) return;
               const id = importGroup(shared, me);
+              success();
               showToast(`Added ${shared.name}`);
               open(id);
             }}
