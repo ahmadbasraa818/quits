@@ -319,7 +319,3 @@ npx eas-cli submit --platform ios      # or android
 ```
 
 The privacy policy an app store asks for is at https://ahmadbasraa818.github.io/quits/privacy.
-
-## Licence
-
-MIT
