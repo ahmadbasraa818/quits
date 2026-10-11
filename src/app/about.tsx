@@ -10,6 +10,7 @@ import { appVersion, issueUrl, openLink } from '@/components/crash-screen';
 import { success } from '@/components/haptics';
 import { Icon, IconName } from '@/components/icon';
 import { Card, Screen, Scroll, SectionLabel, TopBar } from '@/components/layout';
+import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { RELEASES, WhatsNew } from '@/components/whats-new';
@@ -18,10 +19,16 @@ import { isAppleMobile, useInstall } from '@/lib/install';
 import type { Group } from '@/lib/types';
 import { fromBackup, toBackup } from '@/store/backup';
 import { isDemo, useGroups } from '@/store/groups';
-import { useSettings } from '@/store/settings';
+import { type ThemeChoice, useSettings } from '@/store/settings';
 import { space, useTheme } from '@/theme';
 
 const SOURCE = 'https://github.com/ahmadbasraa818/quits';
+
+const THEMES: { value: ThemeChoice; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 const POINTS: { icon: IconName; title: string; body: string }[] = [
   {
@@ -152,6 +159,8 @@ export default function AboutScreen() {
   const showToast = useToast((state) => state.show);
   const haptics = useSettings((state) => state.haptics);
   const setHaptics = useSettings((state) => state.setHaptics);
+  const themeChoice = useSettings((state) => state.theme);
+  const setTheme = useSettings((state) => state.setTheme);
   const [changes, setChanges] = useState(false);
   // Back to the groups already underneath, rather than stacking a second copy of them.
   const toGroups = () => {
@@ -197,9 +206,21 @@ export default function AboutScreen() {
         <SectionLabel help="backup">Your data</SectionLabel>
         <YourData />
 
-        {Platform.OS !== 'web' ? (
-          <>
-            <SectionLabel help="haptics">Preferences</SectionLabel>
+        <SectionLabel help={Platform.OS !== 'web' ? 'haptics' : undefined}>Preferences</SectionLabel>
+        <View style={{ gap: space(3) }}>
+          <Card style={styles.point}>
+            <Icon name="circleHalf" size={24} color={theme.ink} />
+            <View style={{ flex: 1, gap: space(1) }}>
+              <Text variant="bodyStrong">Theme</Text>
+              <Text variant="body" tone="muted">
+                Light or dark, or System to match this device.
+              </Text>
+              <View style={{ marginTop: space(2) }}>
+                <Segmented label="Theme" options={THEMES} value={themeChoice} onChange={setTheme} />
+              </View>
+            </View>
+          </Card>
+          {Platform.OS !== 'web' ? (
             <Card style={styles.point}>
               <Icon name="vibrate" size={24} color={theme.ink} />
               <View style={{ flex: 1, gap: space(1) }}>
@@ -219,8 +240,8 @@ export default function AboutScreen() {
                 testID="haptics-switch"
               />
             </Card>
-          </>
-        ) : null}
+          ) : null}
+        </View>
 
         <SectionLabel>Help and privacy</SectionLabel>
         <View style={styles.dataActions}>

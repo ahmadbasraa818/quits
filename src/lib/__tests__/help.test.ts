@@ -29,6 +29,7 @@ describe('searching the help', () => {
   it('finds an answer by its question first, ignoring case and accents', () => {
     expect(searchHelp('CURRÉNCY')[0].id).toBe('currency');
     expect(searchHelp('fewest payments')[0].id).toBe('fewest');
+    expect(searchHelp('dark mode')[0].id).toBe('theme');
   });
 
   it('finds an answer by words that are only in its answer or extra words', () => {

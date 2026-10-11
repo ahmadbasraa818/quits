@@ -1,5 +1,7 @@
 import { useColorScheme } from 'react-native';
 
+import { useSettings } from '@/store/settings';
+
 /**
  * Quits is set on warm paper with near-black ink and one orange, the same
  * family as thecodingexplorer.com. Text on orange is always ink: white on
@@ -65,8 +67,11 @@ const dark: Theme = {
 
 export const themes: Record<'light' | 'dark', Theme> = { light, dark };
 
+/** The theme chosen in About, or the device's. */
 export function useTheme(): Theme {
-  return useColorScheme() === 'dark' ? dark : light;
+  const device = useColorScheme();
+  const choice = useSettings((state) => state.theme);
+  return (choice === 'system' ? device : choice) === 'dark' ? dark : light;
 }
 
 export const font = {
