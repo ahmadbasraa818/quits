@@ -15,6 +15,13 @@ export type Release = { version: string; title: string; items: { icon: IconName;
 /** What each release brought, newest first. The newest is always the app's own version. */
 export const RELEASES: Release[] = [
   {
+    version: '2.4.0',
+    title: 'Light or dark, as you like',
+    items: [
+      { icon: 'circleHalf', text: 'Choose a light or dark theme in About, under Preferences, or keep Quits matching your device.' },
+    ],
+  },
+  {
     version: '2.3.0',
     title: 'Regular bills, tidy groups',
     items: [
