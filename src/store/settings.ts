@@ -13,6 +13,9 @@ export const FIRST_TRACKED = '1.0.0';
 /** How many reminders are remembered: plenty for every payment still open. */
 const MAX_REMINDED = 100;
 
+/** Light or dark, or `system` to match the device. */
+export type ThemeChoice = 'system' | 'light' | 'dark';
+
 type Saved = {
   /** Whether the welcome card has been put away. */
   welcomeDone: boolean;
@@ -20,6 +23,8 @@ type Saved = {
   seenVersion: string | null;
   /** Whether Quits taps back when pressed, on a phone. */
   haptics: boolean;
+  /** Whether Quits is light or dark, or the same as the device. */
+  theme: ThemeChoice;
   /** When each payment was last reminded about, by `remindedKey`. */
   reminded: Record<string, number>;
 };
@@ -28,6 +33,7 @@ type SettingsState = Saved & {
   finishWelcome: () => void;
   markSeen: (version: string) => void;
   setHaptics: (on: boolean) => void;
+  setTheme: (theme: ThemeChoice) => void;
   noteReminded: (key: string, at?: number) => void;
 };
 
@@ -37,6 +43,8 @@ export const remindedKey = (groupId: string, from: string, to: string) => `${gro
 const isTimes = (value: unknown): value is Record<string, number> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) && Object.values(value).every((time) => Number.isSafeInteger(time));
 
+const isThemeChoice = (value: unknown): value is ThemeChoice => value === 'system' || value === 'light' || value === 'dark';
+
 /** What was saved, each part only if it's the right kind of thing, so damaged settings fall back to the defaults. */
 function mergeSaved(persisted: unknown, current: SettingsState): SettingsState {
   const saved = (typeof persisted === 'object' && persisted !== null ? persisted : {}) as Partial<Record<keyof Saved, unknown>>;
@@ -45,6 +53,7 @@ function mergeSaved(persisted: unknown, current: SettingsState): SettingsState {
     welcomeDone: typeof saved.welcomeDone === 'boolean' ? saved.welcomeDone : current.welcomeDone,
     seenVersion: typeof saved.seenVersion === 'string' ? saved.seenVersion : current.seenVersion,
     haptics: typeof saved.haptics === 'boolean' ? saved.haptics : current.haptics,
+    theme: isThemeChoice(saved.theme) ? saved.theme : current.theme,
     reminded: isTimes(saved.reminded) ? saved.reminded : current.reminded,
   };
 }
@@ -56,10 +65,12 @@ export const useSettings = create<SettingsState>()(
       welcomeDone: false,
       seenVersion: null,
       haptics: true,
+      theme: 'system',
       reminded: {},
       finishWelcome: () => set({ welcomeDone: true }),
       markSeen: (version) => set({ seenVersion: version }),
       setHaptics: (on) => set({ haptics: on }),
+      setTheme: (theme) => set({ theme }),
       // The newest are kept, so the list can't grow for ever.
       noteReminded: (key, at = Date.now()) =>
         set((state) => ({
@@ -73,7 +84,7 @@ export const useSettings = create<SettingsState>()(
     {
       name: 'quits-settings',
       storage: createJSONStorage(() => safeStorage),
-      partialize: ({ welcomeDone, seenVersion, haptics, reminded }): Saved => ({ welcomeDone, seenVersion, haptics, reminded }),
+      partialize: ({ welcomeDone, seenVersion, haptics, theme, reminded }): Saved => ({ welcomeDone, seenVersion, haptics, theme, reminded }),
       merge: mergeSaved,
     }
   )

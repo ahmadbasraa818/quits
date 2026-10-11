@@ -12,6 +12,7 @@ const ICONS = [
   'gear-six', 'magnifying-glass', 'caret-left', 'note-pencil', 'user-minus', 'door-open', 'globe-hemisphere-west',
   'arrows-down-up', 'arrows-clockwise', 'magic-wand', 'pencil-line', 'download-simple', 'lock-simple', 'upload-simple', 'link', 'shield-check', 'bug', 'arrow-clockwise', 'question', 'keyboard',
   'wallet', 'paper-plane-tilt', 'arrow-square-out', 'vibrate', 'repeat', 'archive', 'arrow-u-up-left', 'file-csv',
+  'circle-half',
   // Expense categories
   'fork-knife', 'coffee', 'train', 'airplane-tilt', 'car', 'bed', 'house', 'lightning', 'shopping-bag',
   'ticket', 'gift', 'dots-three',

@@ -20,7 +20,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 - **Type it as you'd say it.** "Ramen ¥4,800, Aiko paid, split with Ben and me" becomes an expense. A small scanner reads it: instant, offline and fully tested. [How it works](#quick-add)
 - **Shared without a server.** A whole group fits in a link, after the `#`, where no server ever sees it. [How it works](#sharing-without-a-server)
 - **An app on the web too.** Install it from the browser and it opens offline. On a wide screen, the groups sit in a sidebar.
-- **Tested like it matters.** 404 unit, property and component tests and 106 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
+- **Tested like it matters.** 406 unit, property and component tests and 108 end-to-end runs with accessibility scans. CI deploys the demo only when everything passes. [Quality](#quality)
 
 ## What it does
 
@@ -67,7 +67,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 
 - **Install it from the browser** and it opens without a connection.
 - **On a wide screen** your groups stay in a sidebar beside whatever's open.
-- **Light and dark themes**, reduced motion respected, and screen-reader labels throughout.
+- **Light and dark themes**, matching your device or chosen in About, reduced motion respected, and screen-reader labels throughout.
 
 <p align="center">
   <img src="docs/demo.gif" width="300" alt="Adding karaoke to the Japan trip by typing a sentence, then comparing the plan with paying pair by pair, and recording each payment until everyone is square">
@@ -278,8 +278,8 @@ scripts/        icons, the web export and its service worker, screenshots
 
 ## Quality
 
-- **404 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
-- **106 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
+- **406 unit, property and component tests** with Jest, React Native Testing Library and fast-check, covering the logic, the store and the components.
+- **108 end-to-end runs** with Playwright, on a phone-sized and a desktop browser, against the real web build served as GitHub Pages serves it. They:
   - add, edit, delete and undo; date an expense; create, edit and delete groups;
   - settle a whole group, watching the graph redraw; record part of a payment and delete one; share the plan through the clipboard;
   - read the spending charts and a person’s statement; search and filter;
@@ -292,8 +292,9 @@ scripts/        icons, the web export and its service worker, screenshots
   - reset or remove the demo groups while keeping the person's own;
   - add how someone gets paid from a pasted link, and pay them with the amount filled in; remind someone with the link to pay you, remembered after a reload; and pay from a friend's copy of a shared group;
   - start a monthly expense, move the browser's clock two months on, and find the two that came due; archive a group and bring it back; export a group and check its balance row;
+  - choose a dark theme on a light device and keep it through a reload, then follow the device again under System;
   - and run axe accessibility scans of twenty-three screens and sheets in light and dark mode.
-- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator.
+- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator. The theme choice, with the status and gesture bars following it, has been run on Android in a release build on the emulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
 ## Run it

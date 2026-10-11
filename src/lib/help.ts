@@ -85,6 +85,14 @@ const ENTRIES = [
     show: { label: 'Open About', target: { kind: 'route', href: '/about' } },
   },
   {
+    id: 'theme',
+    topic: 'start',
+    question: 'Is there a dark mode?',
+    answer: ['Yes. Quits is light or dark to match your device, and changes when it does. To keep it one or the other, choose Light or Dark in About, under Preferences.'],
+    keywords: ['theme', 'appearance', 'night', 'black', 'colours', 'colors'],
+    show: { label: 'Open About', target: { kind: 'route', href: '/about' } },
+  },
+  {
     id: 'haptics',
     topic: 'start',
     question: 'Can I turn off the taps I feel?',
