@@ -6,7 +6,7 @@ Messaging apps show it when someone sends a Quits link, such as a shared group.
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1200, 630
-PAPER, INK, MUTED, BRAND, LINE = (245, 243, 238), (22, 23, 26), (94, 97, 104), (255, 90, 31), (205, 199, 188)
+PAPER, INK, MUTED, BRAND, LINE = (245, 243, 238), (22, 23, 26), (94, 97, 104), (139, 108, 255), (205, 199, 188)
 FONTS = "node_modules/@expo-google-fonts/archivo"
 
 

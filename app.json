@@ -19,7 +19,7 @@
     "android": {
       "package": "com.ahmadbasraa.quits",
       "adaptiveIcon": {
-        "backgroundColor": "#FF5A1F",
+        "backgroundColor": "#8B6CFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -29,7 +29,7 @@
       "output": "single",
       "name": "Quits",
       "shortName": "Quits",
-      "themeColor": "#FF5A1F",
+      "themeColor": "#8B6CFF",
       "backgroundColor": "#F5F3EE",
       "favicon": "./assets/images/favicon.png"
     },
@@ -39,11 +39,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FF5A1F",
+          "backgroundColor": "#8B6CFF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120,
           "dark": {
-            "backgroundColor": "#FF6A33",
+            "backgroundColor": "#A08CFF",
             "image": "./assets/images/splash-icon.png"
           }
         }
