@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { remindedKey, useSettings } from '../settings';
 
-const defaults = { welcomeDone: false, seenVersion: null, haptics: true, reminded: {} };
+const defaults = { welcomeDone: false, seenVersion: null, haptics: true, theme: 'system' as const, reminded: {} };
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -22,13 +22,13 @@ describe('the settings', () => {
   });
 
   it('load what was saved', async () => {
-    await AsyncStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: true, seenVersion: '2.1.0', haptics: false, reminded: { 'g/a/b': 7 } }, version: 0 }));
+    await AsyncStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: true, seenVersion: '2.1.0', haptics: false, theme: 'dark', reminded: { 'g/a/b': 7 } }, version: 0 }));
     await useSettings.persist.rehydrate();
-    expect(useSettings.getState()).toMatchObject({ welcomeDone: true, seenVersion: '2.1.0', haptics: false, reminded: { 'g/a/b': 7 } });
+    expect(useSettings.getState()).toMatchObject({ welcomeDone: true, seenVersion: '2.1.0', haptics: false, theme: 'dark', reminded: { 'g/a/b': 7 } });
   });
 
   it('fall back to the defaults for anything damaged', async () => {
-    await AsyncStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: 'yes', seenVersion: 2, haptics: null, reminded: { 'g/a/b': 'soon' } }, version: 0 }));
+    await AsyncStorage.setItem('quits-settings', JSON.stringify({ state: { welcomeDone: 'yes', seenVersion: 2, haptics: null, theme: 'sepia', reminded: { 'g/a/b': 'soon' } }, version: 0 }));
     await useSettings.persist.rehydrate();
     expect(useSettings.getState()).toMatchObject(defaults);
     await AsyncStorage.setItem('quits-settings', '{not json');

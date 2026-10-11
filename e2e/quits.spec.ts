@@ -625,6 +625,31 @@ test('explains how it handles data, from About and at its own address', async ({
   await expect(page.getByRole('heading', { name: 'Your groups stay yours' })).toBeVisible();
 });
 
+test('keeps the theme chosen in About, over the device’s', async ({ page }) => {
+  // The theme choice's own track: sunken in the light theme, then in the dark one.
+  const [light, dark] = ['rgb(236, 233, 226)', 'rgb(34, 36, 40)'];
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('about');
+  const choice = page.getByRole('tablist', { name: 'Theme' });
+  await expect(tab(page, 'System')).toHaveAttribute('aria-selected', 'true');
+  await expect(choice).toHaveCSS('background-color', light);
+
+  await tab(page, 'Dark').click();
+  await expect(choice).toHaveCSS('background-color', dark);
+  // The browser's own bar goes dark too.
+  await expect(page.locator('meta[name="theme-color"]').first()).toHaveAttribute('content', '#0F1012');
+  await page.reload();
+  await expect(tab(page, 'Dark')).toHaveAttribute('aria-selected', 'true');
+  await expect(choice).toHaveCSS('background-color', dark);
+
+  // System follows the device again, as it changes.
+  await tab(page, 'System').click();
+  await expect(choice).toHaveCSS('background-color', light);
+  await expect(page.locator('meta[name="theme-color"]').first()).toHaveAttribute('content', '#F5F3EE');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(choice).toHaveCSS('background-color', dark);
+});
+
 test('answers a shared link with a preview, not a 404', async ({ request }) => {
   const response = await request.get('import');
   expect(response.status()).toBe(200);

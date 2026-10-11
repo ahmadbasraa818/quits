@@ -67,7 +67,7 @@ Quits keeps a running score of who paid for what on a trip, in a flat or on a ni
 
 - **Install it from the browser** and it opens without a connection.
 - **On a wide screen** your groups stay in a sidebar beside whatever's open.
-- **Light and dark themes**, reduced motion respected, and screen-reader labels throughout.
+- **Light and dark themes**, matching your device or chosen in About, reduced motion respected, and screen-reader labels throughout.
 
 <p align="center">
   <img src="docs/demo.gif" width="300" alt="Adding karaoke to the Japan trip by typing a sentence, then comparing the plan with paying pair by pair, and recording each payment until everyone is square">

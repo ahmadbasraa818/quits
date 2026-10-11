@@ -15,8 +15,9 @@ import { ToastHost, useToast } from '@/components/toast';
 import { keepForOffline, listenForInstall } from '@/lib/install';
 import { hadSavedGroups, useGroups, useHydrated } from '@/store/groups';
 import { loadSetAside } from '@/store/recovery';
-import { settleFirstRun, useSettingsHydrated } from '@/store/settings';
+import { settleFirstRun, useSettings, useSettingsHydrated } from '@/store/settings';
 import { useTheme } from '@/theme';
+import { applyTheme } from '@/theme/apply';
 import { fontFiles } from '@/theme/fonts';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -34,6 +35,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const theme = useTheme();
+  const themeChoice = useSettings((state) => state.theme);
   const [fontsLoaded, fontError] = useFonts(fontFiles);
   const hydrated = useHydrated();
   const settingsLoaded = useSettingsHydrated();
@@ -42,6 +44,9 @@ export default function RootLayout() {
   const ready = (fontsLoaded || fontError !== null) && hydrated && settingsLoaded;
   // On a computer, ? opens help from anywhere.
   useGlobalShortcuts({ '?': () => pathname !== '/help' && router.push('/help') });
+
+  // What the phone or browser draws itself follows the theme chosen in About too.
+  useEffect(() => applyTheme(themeChoice), [themeChoice]);
 
   // Repeating expenses that came due while Quits was closed or in the background are added when it's back.
   useEffect(() => {
