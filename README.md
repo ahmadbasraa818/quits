@@ -9,13 +9,6 @@
   A React Native app for iOS, Android and the web.
 </p>
 
-<p align="center">
-  <a href="https://ahmadbasraa818.github.io/quits/"><strong>Try the live demo</strong></a>
-  ·
-  <a href="#the-fewest-payments">How it settles up</a>
-  ·
-  <a href="docs/ARCHITECTURE.md">Architecture</a>
-</p>
 
 <p align="center">
   <a href="https://github.com/ahmadbasraa818/quits/actions/workflows/ci.yml"><img src="https://github.com/ahmadbasraa818/quits/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
