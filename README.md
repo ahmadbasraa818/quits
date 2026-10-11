@@ -9,14 +9,6 @@
   A React Native app for iOS, Android and the web.
 </p>
 
-
-<p align="center">
-  <a href="https://github.com/ahmadbasraa818/quits/actions/workflows/ci.yml"><img src="https://github.com/ahmadbasraa818/quits/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/Expo-SDK%2057-16171A" alt="Expo SDK 57">
-  <img src="https://img.shields.io/badge/TypeScript-strict-16171A" alt="TypeScript, strict">
-  <img src="https://img.shields.io/badge/license-MIT-16171A" alt="MIT licence">
-</p>
-
 ![Quits: the groups list, the plan that settles a five-person trip in four payments with a diagram of who pays whom, and the trip's spending by category in dark mode](docs/hero.png)
 
 Quits keeps a running score of who paid for what on a trip, in a flat or on a night out, then works out the fewest payments that make everyone square. One TypeScript codebase runs it on iOS, Android and the web. It works offline, and your groups stay on your device: there is no server.
