@@ -17,7 +17,7 @@
       }
     },
     "android": {
-      "package": "com.ahmadbasraa.quits",
+      "package": "com.studio.quits",
       "adaptiveIcon": {
         "backgroundColor": "#8B6CFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
