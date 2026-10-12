@@ -3,9 +3,9 @@ import { useColorScheme } from 'react-native';
 import { useSettings } from '@/store/settings';
 
 /**
- * Quits is set on warm paper with near-black ink and one orange, the same
- * family as thecodingexplorer.com. Text on orange is always ink: white on
- * orange fails contrast. Money owed to you is green, money you owe is red.
+ * Quits is set on warm paper with near-black ink and one violet, kept well
+ * clear of the green and red of money: money owed to you is green, money you
+ * owe is red. Text on violet is always ink: white on violet fails contrast.
  */
 export type Theme = {
   scheme: 'light' | 'dark';
@@ -37,14 +37,14 @@ const light: Theme = {
   line: '#E0DCD2',
   ink: '#16171A',
   inkMuted: '#5E6168',
-  brand: '#FF5A1F',
+  brand: '#8B6CFF',
   onBrand: '#16171A',
   positive: '#0B7A55',
   negative: '#C2352B',
   onNegative: '#FFFFFF',
   scrim: 'rgba(22, 23, 26, 0.45)',
   tones: ['#FFD9C8', '#D7E6FF', '#D3F1E1', '#F1DCF8', '#FFEFB8', '#DCE2EE', '#F9D5DF', '#D2EDF1'],
-  chart: ['#FF5A1F', '#2D6BE4', '#0B8A5F', '#8E4EC6', '#D99A00', '#D6407A', '#178A99', '#7A7F88'],
+  chart: ['#8B6CFF', '#2D6BE4', '#0B8A5F', '#FF5A1F', '#D99A00', '#D6407A', '#178A99', '#7A7F88'],
 };
 
 const dark: Theme = {
@@ -55,14 +55,14 @@ const dark: Theme = {
   line: '#2D3035',
   ink: '#F4F2ED',
   inkMuted: '#A6A9AF',
-  brand: '#FF6A33',
+  brand: '#A08CFF',
   onBrand: '#16171A',
   positive: '#43D296',
   negative: '#FF7C70',
   onNegative: '#16171A',
   scrim: 'rgba(0, 0, 0, 0.62)',
   tones: ['#5C2F1E', '#23395E', '#1E4A36', '#4A2A58', '#5B4A15', '#2F3647', '#5B2538', '#1F4A51'],
-  chart: ['#FF6A33', '#6B9BFF', '#3DCB8E', '#B888F2', '#F2C14E', '#F27BA6', '#4CC3D2', '#A6A9AF'],
+  chart: ['#A08CFF', '#3D8BFF', '#3DCB8E', '#FF6A33', '#F2C14E', '#F27BA6', '#4CC3D2', '#A6A9AF'],
 };
 
 export const themes: Record<'light' | 'dark', Theme> = { light, dark };
