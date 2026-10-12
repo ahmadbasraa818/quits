@@ -7,6 +7,7 @@ This is a tour of the code and the decisions behind it. The [README](../README.m
 ```
 src/app          screens, one file per route (Expo Router)
 src/components   the pieces the screens are made of
+src/theme        colours, type and spacing, and which theme is in use
 src/store        state: the persisted store, migrations, backups, summaries
 src/lib          logic: plain TypeScript functions on plain data
 ```
@@ -90,7 +91,7 @@ It doesn't guess. Anything the sentence doesn't say falls back to the form's def
 
 React Native for Web 0.21 drops `accessibilityState`. So tabs, radio buttons and checkboxes set `aria-selected` and `aria-checked` directly, which work on every platform.
 
-The end-to-end tests run axe on sixteen screens and sheets in both themes, with reduced motion on, so a frame of an animation is never read as a contrast failure.
+The end-to-end tests run axe on twenty-three screens and sheets in both themes, with reduced motion on, so a frame of an animation is never read as a contrast failure.
 
 ### The web app
 
@@ -103,6 +104,8 @@ The end-to-end tests run axe on sixteen screens and sheets in both themes, with 
 ### Platform differences in one place
 
 Where the web and phones differ, there are two files side by side. For example, `backup-file.ts` saves a backup through the share sheet with expo-file-system and expo-sharing, and `backup-file.web.ts` downloads it. The bundler picks the right one, and the code that calls them never checks the platform.
+
+The theme chosen in About works the same way. `useTheme` gives every screen its colours on both, and `theme/apply.ts` tells Android and iOS too, so the status bar, the gesture bar and the keyboard match. The web has no such call, so `apply.web.ts` colours the browser's own bar instead.
 
 ### The settle-up diagram's labels
 
@@ -127,7 +130,7 @@ The cheapest spot wins. When costs tie, it prefers the middle of the arrow and t
 - **End to end:** Playwright runs against the real web build, served the way GitHub Pages serves it, in a phone-sized and a desktop browser.
   - It covers whole journeys, like sharing a group to a second, empty browser and opening it as another person.
   - It covers the offline service worker, and served and failed rate lookups.
-- **On a phone:** the native paths have been run in Expo Go on the iOS simulator: share links opened as deep links, a backup saved through the share sheet and read back.
+- **On a phone:** the native paths have been run in Expo Go on the iOS simulator: share links opened as deep links, a backup saved through the share sheet and read back. A release build on the Android emulator has run the theme choice against every device setting, with the bars following, and the 2.5.0 icon and splash.
 
 ## Building and shipping
 
@@ -135,4 +138,6 @@ The cheapest spot wins. When costs tie, it prefers the middle of the arrow and t
   - lint, strict TypeScript and the Jest tests;
   - the web build and the Playwright tests.
 - **On `main`**, a third job deploys the build to GitHub Pages, but only after both of those pass.
-- **Screenshots:** the ones in the README come from the same build, through `scripts/capture.mjs`.
+- **Screenshots:** the ones in the README come from the same build, through `scripts/capture.mjs`. `compose-hero.py` and `compose-og.py` build the README's top image and the link preview from them.
+- **Icons:** `scripts/draw-icons.py` draws every icon from the one brand colour: the app's, the Android adaptive icon's, the favicon, the logo and the web app's.
+- **A new accent** is set in five places: the theme, `app.json`, the web manifest, `draw-icons.py` and `compose-og.py`. Running those two scripts and `capture.mjs` then remakes every image that shows it.

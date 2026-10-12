@@ -257,7 +257,7 @@ Each layer can use any layer below it, never one above. The logic in `src/lib` h
 | State | Zustand, persisted with AsyncStorage and migrated between versions. On the web it falls back to memory if the browser blocks storage, so the demo still works when embedded in another site. |
 | Motion | Reanimated 4: the settle-up graph redrawing, charts growing in, sliding tab marker, list layout transitions and press feedback, all off when the system asks for reduced motion |
 | Gestures | React Native Gesture Handler: swipe an expense to delete it |
-| Graphics | react-native-svg for the settle-up graph and the charts, and a generated subset of Phosphor icons (51 of them, not the whole set) |
+| Graphics | react-native-svg for the settle-up graph and the charts, and a generated subset of Phosphor icons (65 of them, not the whole set) |
 | Files | fflate for share links; expo-file-system, expo-sharing and expo-document-picker for backups on phones, a download and the file picker on the web |
 | Web app | A manifest and a service worker written at build time: it keeps every file of the current version, keyed by a hash of their contents, serves pages from the network first so a deploy shows at once, and opens the kept copy offline |
 | Type | Archivo, loaded per weight |
@@ -271,9 +271,10 @@ src/
                 quick add, sums, share links, pay links, repeats, spreadsheets, help, validation
                 and the graph's layout
   store/        the persisted store, settings, migrations, backups, the demo data and cached rates
-  theme/        colours for light and dark, type and spacing
+  theme/        colours for light and dark, type and spacing, and the theme chosen in About,
+                passed on to the phone or the browser
 e2e/            Playwright tests against the web build
-scripts/        icons, the web export and its service worker, screenshots
+scripts/        icons, the web export and its service worker, screenshots and the link preview
 ```
 
 ## Quality
@@ -294,7 +295,7 @@ scripts/        icons, the web export and its service worker, screenshots
   - start a monthly expense, move the browser's clock two months on, and find the two that came due; archive a group and bring it back; export a group and check its balance row;
   - choose a dark theme on a light device and keep it through a reload, then follow the device again under System;
   - and run axe accessibility scans of twenty-three screens and sheets in light and dark mode.
-- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator. The theme choice, with the status and gesture bars following it, has been run on Android in a release build on the emulator.
+- **On a phone too:** opening share links, saving a backup through the share sheet and reading it back, sending a reminder through the share sheet, and handing a pay link to the system have been run on iOS, in Expo Go on the simulator. The theme choice, with the status and gesture bars following it, and 2.5.0's violet icon, splash and what's new, have been run on Android in a release build on the emulator.
 - **CI on every push:** lint, strict TypeScript, tests, the web build and the end-to-end tests. Pushes to `main` deploy the live demo once all of them pass.
 
 ## Run it
@@ -308,7 +309,7 @@ npm run export:web        # the web build, in dist/
 npm run e2e               # end-to-end tests against that build
 ```
 
-To retake the screenshots and the demo, serve the build with `node scripts/serve-dist.mjs 4173` and run `node scripts/capture.mjs`, then `python scripts/compose-hero.py` for the image at the top and `python scripts/compose-og.py` for the link preview.
+To redraw every icon in the brand colour (the app's, the Android adaptive icon's and the web app's), run `python scripts/draw-icons.py`. To retake the screenshots and the demo, serve the build with `node scripts/serve-dist.mjs 4173` and run `node scripts/capture.mjs` (it needs ffmpeg for the GIF), then `python scripts/compose-hero.py` for the image at the top and `python scripts/compose-og.py` for the link preview. The Python scripts need Pillow.
 
 ### App store builds
 
@@ -318,5 +319,17 @@ To retake the screenshots and the demo, serve the build with `node scripts/serve
 npx eas-cli build --profile production --platform all
 npx eas-cli submit --platform ios      # or android
 ```
+
+To build for Google Play on your own machine instead, generate the Android project and build a bundle with Gradle:
+
+```bash
+npx expo prebuild --platform android
+cd android && ./gradlew bundleRelease
+```
+
+- **Give Gradle more memory first.** The generated `android/gradle.properties` caps Metaspace at 512 MB, which the release lint step runs out of, and the build then hangs rather than failing. Set `org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m`.
+- **Sign it with your upload key**, kept out of the repo, for example with Android Studio's signing properties: `-Pandroid.injected.signing.store.file=…` and the rest.
+- **Raise `versionCode`** in `android/app/build.gradle` for each upload: Google Play turns away a number it has already seen.
+- Prebuild also points the `android` and `ios` scripts in `package.json` at `expo run`; put them back if you use Expo Go.
 
 The privacy policy an app store asks for is at https://ahmadbasraa818.github.io/quits/privacy.
